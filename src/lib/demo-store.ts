@@ -1,10 +1,7 @@
 // Demo-only storage in this browser. No real bank, no real money.
 export type DemoUser = { name: string; phone: string; pin: string };
 
-export type Card =
-  | { kind: "balance"; amount: string }
-  | { kind: "narration"; done?: boolean }
-  | {
+export type ApprovalCard = {
       kind: "approval";
       service: "transfer" | "airtime" | "data";
       amount: number;
@@ -12,7 +9,12 @@ export type Card =
       bank: string;
       narration?: string;
       status: "pending" | "approved" | "cancelled";
-    }
+    };
+
+export type Card =
+  | { kind: "balance"; amount: string }
+  | { kind: "narration"; pending: ApprovalCard; done?: boolean }
+  | ApprovalCard
   | { kind: "receipt"; title: string; amount: number; rows: [string, string][] };
 
 export type ChatMsg = { id: string; role: "user" | "nella"; text?: string; card?: Card; at: number };
@@ -108,7 +110,7 @@ export function demoReply(text: string): Omit<ChatMsg, "id" | "at" | "role">[] {
     const bank = BANKS.find((b) => t.includes(b.toLowerCase()));
     if (!amount || !account || !bank)
       return [{ text: 'Who should I send to? Type it like "₦5,000 to 0123456789 GTBank". You can also snap a photo of the account details.' }];
-    return [{ text: "What is this transfer for? It shows on the receipt and bank narration.", card: { kind: "narration" } }, { card: { kind: "approval", service: "transfer", amount, account, bank, status: "pending" } }];
+    return [{ text: "What is this transfer for? It shows on the receipt and bank narration.", card: { kind: "narration", pending: { kind: "approval", service: "transfer", amount, account, bank, status: "pending" } } }];
   }
 
   if (/^(hi|hello|hey|good (morning|afternoon|evening))/.test(t))
