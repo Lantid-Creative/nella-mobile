@@ -364,21 +364,25 @@ function ChatPage() {
 
   return (
     <div className="bg-hero flex h-[var(--app-height,100dvh)] min-h-0 flex-col overflow-hidden">
-      <header className="relative z-10 flex shrink-0 items-center justify-center px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5">
-        <img src={logo.url} alt="Nella" className="h-7 w-auto" />
+      <header className="relative z-10 flex shrink-0 justify-end px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5">
         <button
           onClick={() => {
             setMenu((m) => !m);
             setConfirmClear(false);
           }}
           aria-label="Profile"
-          title="Profile"
-          className="glass absolute right-4 flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground hover:bg-accent sm:right-5"
+          aria-expanded={menu}
+          className="glass flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground hover:bg-accent"
         >
           <UserRound className="h-5 w-5" />
         </button>
+        <img
+          src={logo.url}
+          alt="Nella"
+          className="absolute left-1/2 top-[max(0.75rem,env(safe-area-inset-top))] h-7 w-auto -translate-x-1/2"
+        />
         {menu && (
-          <div className="glass absolute right-4 top-[calc(100%-0.25rem)] z-20 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-border p-4 shadow-glow sm:right-5">
+          <div className="glass absolute right-4 top-[calc(100%-0.25rem)] z-20 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-border p-4 shadow-glow">
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-bold">{user.name}</p>
@@ -483,7 +487,7 @@ function ChatPage() {
         onClick={() => setMenu(false)}
       >
         {empty ? (
-          <div className="flex min-h-full flex-col items-center justify-center pt-[clamp(1.5rem,7vh,4rem)] pb-8 text-center sm:py-10">
+          <div className="flex min-h-full flex-col items-center justify-center pb-5 pt-[clamp(1.25rem,5vh,2.5rem)] text-center sm:py-8">
             <p className="text-sm text-muted-foreground">Hi, {first}!</p>
             <h1 className="mt-1 max-w-sm text-xl font-bold sm:text-2xl">
               What would you like to do today?
@@ -491,14 +495,13 @@ function ChatPage() {
             <p className="mt-2 max-w-xs text-sm text-muted-foreground">
               Chat, speak, or attach a photo to get started.
             </p>
-            <section aria-label="Money services" className="mt-7 w-full max-w-md sm:mt-8">
+            <section aria-label="Ways to get started" className="mt-8 w-full max-w-md sm:mt-10">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {QUICK_ACTIONS.map((action) => (
                   <QuickActionTile
                     key={action.label}
                     action={action}
                     onClick={() => runQuickAction(action)}
-                    disabled={typing}
                   />
                 ))}
               </div>
@@ -509,7 +512,7 @@ function ChatPage() {
             {msgs.map((m) => (
               <div
                 key={m.id}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start gap-2"}`}
               >
                 <div className="max-w-[85%] space-y-2">
                   {m.media?.kind === "image" && (
@@ -658,7 +661,7 @@ function ChatPage() {
               </div>
             ))}
             {typing && (
-              <div className="flex items-center">
+              <div className="flex">
                 <div className="glass flex gap-1 rounded-full px-4 py-3">
                   {[0, 1, 2].map((i) => (
                     <span
@@ -907,25 +910,16 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
-function QuickActionTile({
-  action,
-  onClick,
-  disabled,
-}: {
-  action: QuickAction;
-  onClick: () => void;
-  disabled: boolean;
-}) {
+function QuickActionTile({ action, onClick }: { action: QuickAction; onClick: () => void }) {
   const Icon = action.icon;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      className="glass flex min-h-32 w-full flex-col items-start gap-3 rounded-2xl border border-border p-4 text-left text-foreground transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-36"
+      className="glass flex min-h-28 w-full flex-col items-start gap-2.5 rounded-2xl border border-border p-4 text-left text-foreground transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-glow">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-glow">
         <Icon className="h-5 w-5" />
       </span>
       <span className="min-w-0">
