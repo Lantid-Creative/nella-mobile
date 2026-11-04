@@ -2,14 +2,14 @@
 export type DemoUser = { name: string; phone: string; pin: string };
 
 export type ApprovalCard = {
-      kind: "approval";
-      service: "transfer" | "airtime" | "data";
-      amount: number;
-      account: string;
-      bank: string;
-      narration?: string;
-      status: "pending" | "approved" | "cancelled";
-    };
+  kind: "approval";
+  service: "transfer" | "airtime" | "data";
+  amount: number;
+  account: string;
+  bank: string;
+  narration?: string;
+  status: "pending" | "approved" | "cancelled";
+};
 
 export type Card =
   | { kind: "balance"; amount: string }
@@ -17,13 +17,27 @@ export type Card =
   | ApprovalCard
   | { kind: "receipt"; title: string; amount: number; rows: [string, string][] };
 
-export type ChatMsg = { id: string; role: "user" | "nella"; text?: string; card?: Card; at: number };
+export type ChatMedia = {
+  kind: "image" | "audio";
+  label: string;
+  previewUrl?: string;
+  durationSeconds?: number;
+};
+
+export type ChatMsg = {
+  id: string;
+  role: "user" | "nella";
+  text?: string;
+  card?: Card;
+  media?: ChatMedia;
+  at: number;
+};
 
 const USERS = "nella.users.v2";
 const SESSION = "nella.session.v2";
 const chatKey = (phone: string) => `nella.chat.v2.${phone}`;
 
-const read = <T,>(k: string, fallback: T): T => {
+const read = <T>(k: string, fallback: T): T => {
   try {
     const v = localStorage.getItem(k);
     return v ? (JSON.parse(v) as T) : fallback;
@@ -45,7 +59,8 @@ export function signUp(name: string, phoneRaw: string, pin: string) {
   if (!phone) throw new Error("Enter a valid Nigerian phone number.");
   if (!/^\d{4}$/.test(pin)) throw new Error("Your PIN must be 4 digits.");
   const users = read<DemoUser[]>(USERS, []);
-  if (users.some((u) => u.phone === phone)) throw new Error("This number already has an account. Log in instead.");
+  if (users.some((u) => u.phone === phone))
+    throw new Error("This number already has an account. Log in instead.");
   users.push({ name: name.trim(), phone, pin });
   localStorage.setItem(USERS, JSON.stringify(users));
   localStorage.setItem(SESSION, phone);
@@ -58,6 +73,19 @@ export function signIn(phoneRaw: string, pin: string) {
   localStorage.setItem(SESSION, u.phone);
 }
 
+export function resetDemoPin(phoneRaw: string, pin: string) {
+  const phone = normalisePhone(phoneRaw);
+  if (!phone) throw new Error("Enter the phone number used for this demo account.");
+  if (!/^\d{4}$/.test(pin)) throw new Error("Your new PIN must be 4 digits.");
+
+  const users = read<DemoUser[]>(USERS, []);
+  const user = users.find((candidate) => candidate.phone === phone);
+  if (!user) throw new Error("No demo account was found for this number in this browser.");
+
+  user.pin = pin;
+  localStorage.setItem(USERS, JSON.stringify(users));
+}
+
 export const signOut = () => localStorage.removeItem(SESSION);
 
 export function currentUser(): DemoUser | null {
@@ -67,20 +95,75 @@ export function currentUser(): DemoUser | null {
 }
 
 export const checkPin = (u: DemoUser, pin: string) => u.pin === pin;
-export const loadChat = (phone: string) => read<ChatMsg[]>(chatKey(phone), []);
-export const saveChat = (phone: string, msgs: ChatMsg[]) =>
-  localStorage.setItem(chatKey(phone), JSON.stringify(msgs));
+
+const LEGACY_CHAT_COPY: Record<string, string> = {
+  "Bill photo · preview only": "Payment photo",
+  "Voice note · preview only": "Voice note",
+  "I’ve received this voice note in the preview, but I can’t transcribe it here. No audio was uploaded and no payment was started.":
+    "Voice messages can’t be transcribed right now. Please type your request instead.",
+  "I can’t read payment details from photos in this preview. Please type the biller and amount instead. Nothing has been paid.":
+    "I can’t read payment details from this photo yet. Enter the biller and amount to continue. No payment has been made.",
+  "Your real activity and receipts will appear here after the live account is connected. This preview does not have transaction history.":
+    "Your activity and receipts are currently unavailable.",
+  "Support chat isn’t connected in this preview. In the live app, this is where you’ll be able to reach the support team.":
+    "Support chat is currently unavailable.",
+};
+
+export const loadChat = (phone: string) =>
+  read<ChatMsg[]>(chatKey(phone), []).map((message): ChatMsg => {
+    if (!message.media) {
+      if (message.text === undefined) return message;
+      const migratedText = LEGACY_CHAT_COPY[message.text];
+      return migratedText === undefined ? message : { ...message, text: migratedText };
+    }
+
+    const { previewUrl: _previewUrl, ...media } = message.media;
+    media.label = message.media.kind === "image" ? "Image attachment" : "Voice attachment";
+    const migratedMessage: ChatMsg = { ...message, media };
+    if (message.text !== undefined) {
+      migratedMessage.text = LEGACY_CHAT_COPY[message.text] ?? message.text;
+    }
+    return migratedMessage;
+  });
+
+export const saveChat = (phone: string, msgs: ChatMsg[]) => {
+  const persistentMessages = msgs.map((message) => {
+    if (!message.media) return message;
+    const { previewUrl: _previewUrl, ...media } = message.media;
+    media.label = message.media.kind === "image" ? "Image attachment" : "Voice attachment";
+    return { ...message, media };
+  });
+  localStorage.setItem(chatKey(phone), JSON.stringify(persistentMessages));
+};
 
 export const naira = (n: number) =>
   "₦" + n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const BANKS = ["GTBank", "Access", "Zenith", "UBA", "First Bank", "Opay", "Moniepoint", "Palmpay", "Kuda", "Wema", "Fidelity", "Sterling", "Union", "Stanbic", "FCMB", "VFD"];
+const BANKS = [
+  "GTBank",
+  "Access",
+  "Zenith",
+  "UBA",
+  "First Bank",
+  "Opay",
+  "Moniepoint",
+  "Palmpay",
+  "Kuda",
+  "Wema",
+  "Fidelity",
+  "Sterling",
+  "Union",
+  "Stanbic",
+  "FCMB",
+  "VFD",
+];
 const NETWORKS = ["MTN", "Airtel", "Glo", "9mobile"];
 
 function parseAmount(t: string): number | null {
   const m = t.replace(/,/g, "").match(/(?:₦|n|naira\s*)?(\d+(?:\.\d+)?)\s*(k)?\b/i);
-  if (!m) return null;
-  const n = parseFloat(m[1]) * (m[2] ? 1000 : 1);
+  const numericAmount = m?.[1];
+  if (!numericAmount) return null;
+  const n = parseFloat(numericAmount) * (m[2] ? 1000 : 1);
   return n > 0 ? n : null;
 }
 
@@ -90,34 +173,127 @@ export function demoReply(text: string): Omit<ChatMsg, "id" | "at" | "role">[] {
   const account = text.match(/\b\d{10}\b/)?.[0];
   const phone = text.match(/\b0[789][01]\d{8}\b/)?.[0];
 
+  if (/voice note|voice message/.test(t))
+    return [
+      {
+        text: "Voice messages can’t be transcribed right now. Please type your request instead.",
+      },
+    ];
+
+  if (/snapped a bill|payment photo/.test(t))
+    return [
+      {
+        text: "I can’t read payment details from this photo yet. Enter the biller and amount to continue. No payment has been made.",
+      },
+    ];
+
   if (/balance|how much.*(have|left)/.test(t))
-    return [{ text: "Here's your wallet balance:", card: { kind: "balance", amount: naira(48250) } }];
+    return [{ text: "Your wallet balance is currently unavailable." }];
+
+  if (/beneficiar/.test(t))
+    return [
+      {
+        text: "Beneficiaries are currently unavailable.",
+      },
+    ];
+
+  if (/scheduled|reminder/.test(t))
+    return [
+      {
+        text: "Scheduled payments are currently unavailable.",
+      },
+    ];
+
+  if (/recent activity|transaction history|receipts/.test(t))
+    return [
+      {
+        text: "Your activity and receipts are currently unavailable.",
+      },
+    ];
+
+  if (/security|change pin/.test(t))
+    return [
+      {
+        text: "Security settings are currently unavailable. Please contact customer support to make account-security changes.",
+      },
+    ];
 
   if (/airtime|recharge|data/.test(t)) {
     const service = /data/.test(t) ? "data" : "airtime";
     const amount = parseAmount(text.replace(phone ?? "", ""));
     const net = NETWORKS.find((n) => t.includes(n.toLowerCase()));
-    if (!amount || !phone)
-      return [{ text: `Sure — tell me the amount and the number, e.g. "₦1,000 ${service} to 08012345678 MTN".` }];
-    return [{ text: "Please check and approve:", card: { kind: "approval", service, amount, account: phone, bank: net ?? "Network detected on approval", status: "pending" } }];
+    if (!amount || !phone || !net)
+      return [
+        {
+          text: `Tell me the amount, number and network, e.g. "₦1,000 ${service} to 08012345678 MTN".`,
+        },
+      ];
+    return [
+      {
+        text: "Review your purchase details:",
+        card: {
+          kind: "approval",
+          service,
+          amount,
+          account: phone,
+          bank: net,
+          status: "pending",
+        },
+      },
+    ];
   }
 
   if (/electric|nepa|prepaid|meter|dstv|gotv|startimes|cable|bill/.test(t))
-    return [{ text: "I can pay electricity and cable TV (DSTV, GOtv, StarTimes). Tell me the biller, the meter or smartcard number and the amount. Bill payments are coming to this app soon." }];
+    return [
+      {
+        text: "Electricity and cable bill payments are currently unavailable. No payment has been made.",
+      },
+    ];
 
   if (/send|transfer|pay\b|sent/.test(t) || account) {
     const amount = parseAmount(text.replace(account ?? "", ""));
     const bank = BANKS.find((b) => t.includes(b.toLowerCase()));
     if (!amount || !account || !bank)
-      return [{ text: 'Who should I send to? Type it like "₦5,000 to 0123456789 GTBank". You can also snap a photo of the account details.' }];
-    return [{ text: "What is this transfer for? It shows on the receipt and bank narration.", card: { kind: "narration", pending: { kind: "approval", service: "transfer", amount, account, bank, status: "pending" } } }];
+      return [
+        {
+          text: 'Who should I send to? Type it like "₦5,000 to 0123456789 GTBank". You can also use + to attach a photo, but I can’t read payment details from photos yet.',
+        },
+      ];
+    return [
+      {
+        text: "Choose a reason for your transfer.",
+        card: {
+          kind: "narration",
+          pending: {
+            kind: "approval",
+            service: "transfer",
+            amount,
+            account,
+            bank,
+            status: "pending",
+          },
+        },
+      },
+    ];
   }
 
   if (/^(hi|hello|hey|good (morning|afternoon|evening))/.test(t))
-    return [{ text: "Hi! I'm Nella. I can send money, buy airtime and data, pay bills and check your balance — just tell me what you need." }];
+    return [
+      {
+        text: "Hi! I'm Nella. I can help with transfers, airtime, data, bills and balance questions. What would you like to do?",
+      },
+    ];
 
   if (/support|help|agent/.test(t))
-    return [{ text: "Our team is here for you. In the live app, \"support\" connects you to a person." }];
+    return [
+      {
+        text: "Support chat is currently unavailable.",
+      },
+    ];
 
-  return [{ text: 'I didn\'t quite get that. Try "check my balance", "send ₦5,000 to 0123456789 GTBank" or "₦1,000 airtime to 08012345678".' }];
+  return [
+    {
+      text: 'I didn\'t quite get that. Try "check my balance", "send ₦5,000 to 0123456789 GTBank" or "₦1,000 airtime to 08012345678".',
+    },
+  ];
 }

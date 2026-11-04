@@ -1,28 +1,98 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowUp, Camera, LogOut, Mic, RotateCcw, ShieldCheck, X } from "lucide-react";
 import {
-  checkPin, currentUser, demoReply, loadChat, naira, saveChat, signOut,
-  type ApprovalCard, type ChatMsg, type DemoUser,
+  ArrowLeftRight,
+  ArrowUp,
+  CalendarClock,
+  Camera,
+  CircleHelp,
+  History,
+  ImagePlus,
+  LogOut,
+  Mic,
+  Plus,
+  ReceiptText,
+  RotateCcw,
+  Shield,
+  Smartphone,
+  UserRound,
+  UsersRound,
+  X,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  currentUser,
+  demoReply,
+  loadChat,
+  naira,
+  saveChat,
+  signOut,
+  type ApprovalCard,
+  type ChatMedia,
+  type ChatMsg,
+  type DemoUser,
 } from "@/lib/demo-store";
-import avatar from "@/assets/nella-avatar.jpg.asset.json";
 import logo from "@/assets/nella-footer-logo.png.asset.json";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
     meta: [
       { title: "Chat with Nella" },
-      { name: "description", content: "Send money, buy airtime and data, pay bills and check your balance by chatting with Nella." },
+      {
+        name: "description",
+        content:
+          "Send money, buy airtime and data, pay bills and check your balance by chatting with Nella.",
+      },
       { property: "og:title", content: "Chat with Nella" },
-      { property: "og:description", content: "Send money, buy airtime and data, pay bills and check your balance by chatting with Nella." },
+      {
+        property: "og:description",
+        content:
+          "Send money, buy airtime and data, pay bills and check your balance by chatting with Nella.",
+      },
     ],
   }),
   component: ChatPage,
 });
 
-const SUGGESTIONS = ["Check my balance", "Send money", "Buy airtime", "Pay a bill"];
 const NARRATIONS = ["Rent", "Food", "Family", "Business"];
 const uid = () => crypto.randomUUID();
+
+type QuickAction = {
+  label: string;
+  prompt: string;
+  description: string;
+  icon: LucideIcon;
+  attachment?: boolean;
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    label: "Check my balance",
+    prompt: "Check my balance",
+    description: "See your available balance",
+    icon: Wallet,
+  },
+  {
+    label: "Send money",
+    prompt: "Send money",
+    description: "Transfer to a bank account",
+    icon: ArrowLeftRight,
+  },
+  {
+    label: "Buy airtime",
+    prompt: "Buy airtime",
+    description: "Top up any network",
+    icon: Smartphone,
+  },
+  {
+    label: "Snap a bill",
+    prompt: "Snap a bill",
+    description: "Scan payment details",
+    icon: ReceiptText,
+    attachment: true,
+  },
+];
 
 function ChatPage() {
   const navigate = useNavigate();
@@ -31,22 +101,76 @@ function ChatPage() {
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [pinFor, setPinFor] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [photoMenu, setPhotoMenu] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<{ file: File; url: string } | null>(null);
+  const [voiceMode, setVoiceMode] = useState<"idle" | "recording" | "review">("idle");
+  const [voiceUrl, setVoiceUrl] = useState("");
+  const [voiceDuration, setVoiceDuration] = useState(0);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const msgsRef = useRef<ChatMsg[]>([]);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordingFailedRef = useRef(false);
+  const recordingStartRef = useRef(0);
+  const objectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     const u = currentUser();
-    if (!u) { navigate({ to: "/", replace: true }); return; }
+    if (!u) {
+      navigate({ to: "/", replace: true });
+      return;
+    }
     setUser(u);
     const m = loadChat(u.phone);
     msgsRef.current = m;
     setMsgs(m);
-    inputRef.current?.focus();
   }, [navigate]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, typing]);
+  useEffect(() => {
+    const updateHeight = () => {
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty("--app-height", `${height}px`);
+    };
+    updateHeight();
+    window.visualViewport?.addEventListener("resize", updateHeight);
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateHeight);
+      window.removeEventListener("resize", updateHeight);
+      document.documentElement.style.removeProperty("--app-height");
+    };
+  }, []);
+
+  useEffect(() => {
+    const scrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
+    endRef.current?.scrollIntoView({ behavior: scrollBehavior, block: "end" });
+  }, [msgs, typing]);
+
+  useEffect(
+    () => () => {
+      recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (voiceMode !== "recording") return;
+    const timer = window.setInterval(() => {
+      setRecordingSeconds(Math.floor((Date.now() - recordingStartRef.current) / 1000));
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [voiceMode]);
 
   const commit = (next: ChatMsg[]) => {
     msgsRef.current = next;
@@ -56,158 +180,493 @@ function ChatPage() {
   const nellaSays = (parts: Omit<ChatMsg, "id" | "at" | "role">[], delay = 800) => {
     setTyping(true);
     setTimeout(() => {
-      commit([...msgsRef.current, ...parts.map((p) => ({ ...p, id: uid(), role: "nella" as const, at: Date.now() }))]);
+      commit([
+        ...msgsRef.current,
+        ...parts.map((p) => ({ ...p, id: uid(), role: "nella" as const, at: Date.now() })),
+      ]);
       setTyping(false);
-      inputRef.current?.focus();
     }, delay);
   };
-  const patch = (id: string, fn: (m: ChatMsg) => ChatMsg) => commit(msgsRef.current.map((m) => (m.id === id ? fn(m) : m)));
+  const patch = (id: string, fn: (m: ChatMsg) => ChatMsg) =>
+    commit(msgsRef.current.map((m) => (m.id === id ? fn(m) : m)));
 
-  const send = (raw: string) => {
+  const send = (raw: string, media?: ChatMedia) => {
     const t = raw.trim();
     if (!t || typing || !user) return;
-    commit([...msgsRef.current, { id: uid(), role: "user", text: t, at: Date.now() }]);
+    commit([
+      ...msgsRef.current,
+      { id: uid(), role: "user", text: t, ...(media ? { media } : {}), at: Date.now() },
+    ]);
     setText("");
-    nellaSays(demoReply(t));
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    nellaSays(
+      demoReply(
+        media?.kind === "audio" ? "Voice note" : media?.kind === "image" ? "I snapped a bill" : t,
+      ),
+    );
+  };
+
+  const runQuickAction = (action: QuickAction) => {
+    if (action.attachment) {
+      setPhotoMenu(true);
+      return;
+    }
+    send(action.prompt);
+  };
+
+  const selectPhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setNotice("Choose an image file.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setNotice("Choose an image under 8 MB.");
+      return;
+    }
+    if (pendingPhoto) URL.revokeObjectURL(pendingPhoto.url);
+    const url = URL.createObjectURL(file);
+    objectUrlsRef.current.push(url);
+    setPendingPhoto({ file, url });
+    setNotice("");
+  };
+
+  const clearPhoto = () => {
+    if (pendingPhoto) URL.revokeObjectURL(pendingPhoto.url);
+    setPendingPhoto(null);
+  };
+
+  const startVoiceRecording = async () => {
+    setNotice("");
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setNotice(
+        "Voice recording isn’t supported in this browser. Try a current browser over HTTPS.",
+      );
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((type) =>
+        MediaRecorder.isTypeSupported(type),
+      );
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
+      recordingFailedRef.current = false;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) chunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        recordingFailedRef.current = true;
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
+        setVoiceMode("idle");
+        setNotice("The recording stopped unexpectedly. Please try again.");
+      };
+      recorder.onstop = () => {
+        if (recordingFailedRef.current) {
+          chunksRef.current = [];
+        } else {
+          const type = recorder.mimeType || "audio/webm";
+          const blob = new Blob(chunksRef.current, { type });
+          if (!blob.size) {
+            setVoiceMode("idle");
+            setNotice("No audio was recorded. Please try again.");
+          } else {
+            const url = URL.createObjectURL(blob);
+            objectUrlsRef.current.push(url);
+            setVoiceUrl(url);
+            setVoiceDuration(
+              Math.max(1, Math.floor((Date.now() - recordingStartRef.current) / 1000)),
+            );
+            setVoiceMode("review");
+          }
+        }
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
+      };
+      recorderRef.current = recorder;
+      recordingStartRef.current = Date.now();
+      setRecordingSeconds(0);
+      recorder.start();
+      setVoiceMode("recording");
+    } catch (error) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      const message =
+        error instanceof DOMException && error.name === "NotAllowedError"
+          ? "Microphone access was denied. Allow it in your browser settings to record a note."
+          : "Couldn’t start recording. Check your microphone and try again.";
+      setNotice(message);
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+  };
+
+  const discardVoiceRecording = () => {
+    if (voiceUrl) URL.revokeObjectURL(voiceUrl);
+    setVoiceUrl("");
+    setVoiceDuration(0);
+    setVoiceMode("idle");
+  };
+
+  const sendPhoto = () => {
+    if (!pendingPhoto) return;
+    const media: ChatMedia = {
+      kind: "image",
+      label: pendingPhoto.file.name,
+      previewUrl: pendingPhoto.url,
+    };
+    send("Payment photo", media);
+    setPendingPhoto(null);
+  };
+
+  const sendVoice = () => {
+    if (!voiceUrl) return;
+    const media: ChatMedia = {
+      kind: "audio",
+      label: "Voice note",
+      previewUrl: voiceUrl,
+      durationSeconds: voiceDuration,
+    };
+    send("Voice note", media);
+    setVoiceUrl("");
+    setVoiceDuration(0);
+    setVoiceMode("idle");
   };
 
   const pickNarration = (msgId: string, pending: ApprovalCard, choice: string | null) => {
-    patch(msgId, (m) => (m.card?.kind === "narration" ? { ...m, card: { ...m.card, done: true } } : m));
-    if (choice) commit([...msgsRef.current, { id: uid(), role: "user", text: choice, at: Date.now() }]);
-    nellaSays([{ text: "Please check and approve:", card: { ...pending, narration: choice ?? undefined } }], 500);
-  };
-
-  const onPinOk = () => {
-    const id = pinFor!;
-    setPinFor(null);
-    const msg = msgsRef.current.find((m) => m.id === id);
-    if (!msg || msg.card?.kind !== "approval") return;
-    const c = msg.card;
-    patch(id, (m) => ({ ...m, card: { ...c, status: "approved" } }));
-    nellaSays([{ text: "Sending…" }], 300);
-    const title = c.service === "transfer" ? "Money sent" : c.service === "airtime" ? "Airtime bought" : "Data bought";
-    nellaSays([{
-      card: {
-        kind: "receipt", title, amount: c.amount,
-        rows: c.service === "transfer"
-          ? [["Bank", c.bank], ["Account", c.account], ...(c.narration ? [["For", c.narration] as [string, string]] : [])]
-          : [["Phone", c.account], ["Network", c.bank]],
-      },
-    }], 1600);
+    patch(msgId, (m) =>
+      m.card?.kind === "narration" ? { ...m, card: { ...m.card, done: true } } : m,
+    );
+    if (choice)
+      commit([...msgsRef.current, { id: uid(), role: "user", text: choice, at: Date.now() }]);
+    nellaSays(
+      [
+        {
+          text: "Please check and approve:",
+          card: { ...pending, ...(choice ? { narration: choice } : {}) },
+        },
+      ],
+      500,
+    );
   };
 
   if (!user) return <div className="min-h-screen bg-background" />;
   const first = user.name.split(" ")[0];
-  const initials = user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
   const empty = msgs.length === 0;
 
   return (
-    <div className="bg-hero flex h-screen flex-col">
-      <header className="relative flex items-center justify-between px-5 py-4">
+    <div className="bg-hero flex h-[var(--app-height,100dvh)] min-h-0 flex-col overflow-hidden">
+      <header className="relative z-10 flex shrink-0 items-center justify-center px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5">
         <img src={logo.url} alt="Nella" className="h-7 w-auto" />
-        <button onClick={() => setMenu((m) => !m)} aria-label="Profile"
-          className="glass flex h-10 w-10 items-center justify-center rounded-full border border-border text-sm font-bold">
-          {initials}
+        <button
+          onClick={() => {
+            setMenu((m) => !m);
+            setConfirmClear(false);
+          }}
+          aria-label="Profile"
+          title="Profile"
+          className="glass absolute right-4 flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground hover:bg-accent sm:right-5"
+        >
+          <UserRound className="h-5 w-5" />
         </button>
         {menu && (
-          <div className="glass absolute right-5 top-16 z-20 w-64 rounded-2xl border border-border p-4 shadow-glow">
-            <p className="font-bold">{user.name}</p>
-            <p className="text-xs text-muted-foreground">+234 {user.phone}</p>
+          <div className="glass absolute right-4 top-[calc(100%-0.25rem)] z-20 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-border p-4 shadow-glow sm:right-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-bold">{user.name}</p>
+                <p className="text-xs text-muted-foreground">+234 {user.phone}</p>
+              </div>
+              <button
+                onClick={() => setMenu(false)}
+                aria-label="Close profile menu"
+                className="rounded-full p-1 text-muted-foreground hover:bg-accent"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <div className="my-3 h-px bg-border" />
-            <button onClick={() => { commit([]); setMenu(false); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent">
-              <RotateCcw className="h-4 w-4" /> Clear chat
-            </button>
-            <button onClick={() => { signOut(); navigate({ to: "/", replace: true }); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent">
+            <ProfileAction
+              icon={History}
+              label="Activity & receipts"
+              onClick={() => {
+                setMenu(false);
+                send("Show my recent activity");
+              }}
+            />
+            <ProfileAction
+              icon={UsersRound}
+              label="Beneficiaries"
+              onClick={() => {
+                setMenu(false);
+                send("Show my beneficiaries");
+              }}
+            />
+            <ProfileAction
+              icon={CalendarClock}
+              label="Scheduled payments"
+              onClick={() => {
+                setMenu(false);
+                send("Show my scheduled payments");
+              }}
+            />
+            <ProfileAction
+              icon={Shield}
+              label="Security & PIN"
+              onClick={() => {
+                setMenu(false);
+                send("Show my security");
+              }}
+            />
+            <ProfileAction
+              icon={CircleHelp}
+              label="Help & support"
+              onClick={() => {
+                setMenu(false);
+                send("I need help");
+              }}
+            />
+            {confirmClear ? (
+              <div className="mt-2 rounded-xl bg-muted p-3">
+                <p className="text-sm font-semibold">Clear this chat?</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  This removes the conversation saved in this browser.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    className="flex-1 rounded-lg border border-border py-2 text-xs font-semibold"
+                  >
+                    Keep chat
+                  </button>
+                  <button
+                    onClick={() => {
+                      commit([]);
+                      setConfirmClear(false);
+                      setMenu(false);
+                    }}
+                    className="flex-1 rounded-lg bg-destructive py-2 text-xs font-semibold text-destructive-foreground"
+                  >
+                    Clear chat
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <ProfileAction
+                icon={RotateCcw}
+                label="Clear chat"
+                onClick={() => setConfirmClear(true)}
+              />
+            )}
+            <button
+              onClick={() => {
+                signOut();
+                navigate({ to: "/", replace: true });
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
+            >
               <LogOut className="h-4 w-4" /> Log out
             </button>
           </div>
         )}
       </header>
 
-      <main className="mx-auto w-full max-w-2xl flex-1 overflow-y-auto px-5" onClick={() => setMenu(false)}>
+      <main
+        className="mx-auto min-h-0 w-full max-w-2xl flex-1 overflow-y-auto overscroll-contain px-4 sm:px-5"
+        onClick={() => setMenu(false)}
+      >
         {empty ? (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="relative mb-10 flex items-center justify-center">
-              <div className="absolute h-48 w-48 rounded-full border border-border bg-primary/5" />
-              <div className="absolute h-32 w-32 rounded-full border border-border bg-primary/10" />
-              <img src={avatar.url} alt="Nella" className="shadow-glow h-20 w-20 rounded-full object-cover" />
-            </div>
-            <p className="text-muted-foreground">Hi, {first}!</p>
-            <h1 className="mt-1 text-2xl font-bold">What would you like to do today?</h1>
-            <div className="mt-8 grid w-full max-w-sm grid-cols-2 gap-3">
-              {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => send(s)} className="glass rounded-2xl border border-border px-4 py-4 text-left text-sm font-semibold hover:bg-accent">{s}</button>
-              ))}
-            </div>
+          <div className="flex min-h-full flex-col items-center justify-center pt-[clamp(1.5rem,7vh,4rem)] pb-8 text-center sm:py-10">
+            <p className="text-sm text-muted-foreground">Hi, {first}!</p>
+            <h1 className="mt-1 max-w-sm text-xl font-bold sm:text-2xl">
+              What would you like to do today?
+            </h1>
+            <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+              Chat, speak, or attach a photo to get started.
+            </p>
+            <section aria-label="Money services" className="mt-7 w-full max-w-md sm:mt-8">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {QUICK_ACTIONS.map((action) => (
+                  <QuickActionTile
+                    key={action.label}
+                    action={action}
+                    onClick={() => runQuickAction(action)}
+                    disabled={typing}
+                  />
+                ))}
+              </div>
+            </section>
           </div>
         ) : (
           <div className="space-y-3 py-4">
             {msgs.map((m) => (
-              <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start gap-2"}`}>
-                {m.role === "nella" && <img src={avatar.url} alt="" className="mt-1 h-7 w-7 shrink-0 rounded-full object-cover" />}
+              <div
+                key={m.id}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div className="max-w-[85%] space-y-2">
+                  {m.media?.kind === "image" && (
+                    <div className="glass overflow-hidden rounded-[20px] border border-border p-2">
+                      {m.media.previewUrl ? (
+                        <img
+                          src={m.media.previewUrl}
+                          alt="Payment photo"
+                          className="max-h-56 max-w-full rounded-xl object-contain"
+                        />
+                      ) : (
+                        <p className="px-2 py-4 text-sm text-muted-foreground">
+                          This photo is no longer available on this device.
+                        </p>
+                      )}
+                      <p className="px-1 pt-1 text-[11px] text-muted-foreground">Photo attached</p>
+                    </div>
+                  )}
+                  {m.media?.kind === "audio" && (
+                    <div className="glass rounded-[20px] border border-border p-3">
+                      {m.media.previewUrl ? (
+                        <audio
+                          controls
+                          src={m.media.previewUrl}
+                          className="max-w-full"
+                          aria-label="Voice note"
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          This voice note is no longer available on this device.
+                        </p>
+                      )}
+                      <p className="pt-1 text-[11px] text-muted-foreground">Voice note</p>
+                    </div>
+                  )}
                   {m.text && (
-                    <div className={`whitespace-pre-wrap text-[15px] leading-relaxed ${m.role === "user" ? "rounded-[20px] rounded-br-[4px] bg-primary px-4 py-3 text-primary-foreground" : "px-1 py-1 text-foreground"}`}>
+                    <div
+                      className={`whitespace-pre-wrap text-[15px] leading-relaxed ${m.role === "user" ? "rounded-[20px] rounded-br-[4px] bg-primary px-4 py-3 text-primary-foreground" : "px-1 py-1 text-foreground"}`}
+                    >
                       {m.text}
                     </div>
                   )}
                   {m.card?.kind === "balance" && (
                     <div className="rounded-[28px] bg-primary p-5 text-primary-foreground shadow-glow">
                       <p className="text-xs opacity-80">Nella wallet</p>
-                      <p className="mt-1 text-3xl font-extrabold tabular-nums">{m.card.amount}</p>
-                      <p className="mt-3 text-[11px] opacity-70">Illustrative figure in this preview</p>
+                      <p className="mt-1 text-lg font-bold">
+                        Your wallet balance is currently unavailable.
+                      </p>
                     </div>
                   )}
-                  {m.card?.kind === "narration" && !m.card.done && (() => {
-                    const c = m.card;
-                    return (
-                      <div className="flex flex-wrap gap-2">
-                        {NARRATIONS.map((n) => (
-                          <button key={n} onClick={() => pickNarration(m.id, c.pending, n)} className="glass rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-accent">{n}</button>
-                        ))}
-                        <button onClick={() => pickNarration(m.id, c.pending, null)} className="rounded-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent">Skip</button>
-                      </div>
-                    );
-                  })()}
+                  {m.card?.kind === "narration" &&
+                    !m.card.done &&
+                    (() => {
+                      const c = m.card;
+                      return (
+                        <div className="flex flex-wrap gap-2">
+                          {NARRATIONS.map((n) => (
+                            <button
+                              key={n}
+                              onClick={() => pickNarration(m.id, c.pending, n)}
+                              className="glass rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-accent"
+                            >
+                              {n}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => pickNarration(m.id, c.pending, null)}
+                            className="rounded-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent"
+                          >
+                            Skip
+                          </button>
+                        </div>
+                      );
+                    })()}
                   {m.card?.kind === "approval" && (
                     <div className="glass rounded-[28px] border border-border p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {m.card.service === "transfer" ? "Send money" : m.card.service === "airtime" ? "Buy airtime" : "Buy data"}
+                      <p className="mb-3 rounded-lg bg-muted px-3 py-2 text-[11px] font-semibold leading-relaxed text-foreground">
+                        {m.card.service === "transfer"
+                          ? "Transfers are currently unavailable."
+                          : m.card.service === "airtime"
+                            ? "Airtime purchases are currently unavailable."
+                            : "Data purchases are currently unavailable."}
                       </p>
-                      <p className="mt-1 text-2xl font-extrabold tabular-nums">{naira(m.card.amount)}</p>
-                      <dl className="mt-3 space-y-1 text-sm">
-                        <Row k={m.card.service === "transfer" ? "Account" : "Phone"} v={m.card.account} />
-                        <Row k={m.card.service === "transfer" ? "Bank" : "Network"} v={m.card.bank} />
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {m.card.service === "transfer"
+                          ? "Send money"
+                          : m.card.service === "airtime"
+                            ? "Buy airtime"
+                            : "Buy data"}
+                      </p>
+                      <p className="mt-1 text-3xl font-extrabold tabular-nums text-foreground">
+                        {naira(m.card.amount)}
+                      </p>
+                      <dl className="mt-4 space-y-2 text-sm">
+                        <Row
+                          k={m.card.service === "transfer" ? "Account number" : "Phone number"}
+                          v={m.card.account}
+                        />
+                        <Row
+                          k={m.card.service === "transfer" ? "Bank" : "Network"}
+                          v={m.card.bank}
+                        />
                         {m.card.narration && <Row k="For" v={m.card.narration} />}
                       </dl>
                       {m.card.status === "pending" ? (
                         <div className="mt-4 grid grid-cols-2 gap-2">
-                          <button onClick={() => patch(m.id, (x) => ({ ...x, card: { ...(x.card as ApprovalCard), status: "cancelled" } }))}
-                            className="rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-accent">Cancel</button>
-                          <button onClick={() => setPinFor(m.id)} className="rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground"
-                            style={{ boxShadow: "var(--shadow-lip)" }}>Approve</button>
+                          <button
+                            onClick={() =>
+                              patch(m.id, (x) => ({
+                                ...x,
+                                card: { ...(x.card as ApprovalCard), status: "cancelled" },
+                              }))
+                            }
+                            className="min-h-11 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-accent"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled
+                            className="min-h-11 cursor-not-allowed rounded-xl bg-muted py-2.5 text-sm font-bold text-muted-foreground"
+                          >
+                            Unavailable
+                          </button>
                         </div>
                       ) : (
-                        <p className="mt-4 text-sm text-muted-foreground">{m.card.status === "approved" ? "Approved with PIN" : "Cancelled — nothing was sent"}</p>
+                        <p className="mt-4 text-sm font-medium text-foreground">
+                          {m.card.status === "approved"
+                            ? "Status unavailable · check your account before retrying"
+                            : "Cancelled"}
+                        </p>
                       )}
                     </div>
                   )}
                   {m.card?.kind === "receipt" && (
                     <div className="rounded-[28px] bg-card p-5 text-card-foreground">
-                      <div className="flex items-center gap-2 text-sm font-bold"><ShieldCheck className="h-4 w-4 text-primary-glow" /> {m.card.title}</div>
-                      <p className="mt-2 text-2xl font-extrabold tabular-nums">{naira(m.card.amount)}</p>
-                      <dl className="mt-3 space-y-1 text-sm">{m.card.rows.map(([k, v]) => <Row key={k} k={k} v={v} />)}</dl>
-                      <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-[11px] text-muted-foreground">Preview receipt — no real money moved.</p>
+                      <div className="flex items-center gap-2 text-sm font-bold">
+                        <CircleHelp className="h-4 w-4 text-muted-foreground" /> Transaction status
+                      </div>
+                      <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground">
+                        We couldn’t verify this transaction. Check your account before retrying.
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
             ))}
             {typing && (
-              <div className="flex items-center gap-2">
-                <img src={avatar.url} alt="" className="h-7 w-7 rounded-full object-cover" />
+              <div className="flex items-center">
                 <div className="glass flex gap-1 rounded-full px-4 py-3">
-                  {[0, 1, 2].map((i) => <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-primary-glow" style={{ animationDelay: `${i * 120}ms` }} />)}
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="h-2 w-2 animate-bounce rounded-full bg-primary-glow"
+                      style={{ animationDelay: `${i * 120}ms` }}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -216,69 +675,284 @@ function ChatPage() {
         )}
       </main>
 
-      <form onSubmit={(e: FormEvent) => { e.preventDefault(); send(text); }} className="mx-auto w-full max-w-2xl px-5 pb-6 pt-2">
-        <div className="glass flex items-end gap-1 rounded-3xl border border-border p-2 pl-2">
-          <button type="button" aria-label="Snap to pay (coming soon)" title="Snap to pay — coming soon" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent">
-            <Camera className="h-5 w-5" />
+      <form
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          send(text);
+        }}
+        className="mx-auto w-full max-w-2xl shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-5"
+      >
+        {pendingPhoto && (
+          <div className="glass mb-2 flex items-center gap-3 rounded-2xl border border-border p-3">
+            <img
+              src={pendingPhoto.url}
+              alt="Selected photo"
+              className="h-14 w-14 shrink-0 rounded-xl object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Review this photo</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Review your photo before attaching it.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                clearPhoto();
+                cameraInputRef.current?.click();
+              }}
+              className="rounded-lg px-2 py-2 text-xs font-semibold hover:bg-accent"
+            >
+              Retake
+            </button>
+            <button
+              type="button"
+              onClick={clearPhoto}
+              aria-label="Remove photo"
+              className="rounded-full p-2 text-muted-foreground hover:bg-accent"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={sendPhoto}
+              disabled={typing}
+              className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+            >
+              Attach
+            </button>
+          </div>
+        )}
+        {voiceMode === "recording" && (
+          <div className="glass mb-2 flex items-center justify-between gap-3 rounded-2xl border border-border p-3">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-destructive" /> Recording ·{" "}
+              {recordingSeconds}s
+            </p>
+            <button
+              type="button"
+              onClick={stopVoiceRecording}
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+            >
+              Stop & review
+            </button>
+          </div>
+        )}
+        {voiceMode === "review" && (
+          <div className="glass mb-2 space-y-2 rounded-2xl border border-border p-3">
+            <p className="text-sm font-semibold">Review voice note · {voiceDuration}s</p>
+            <audio
+              controls
+              src={voiceUrl}
+              className="w-full"
+              aria-label="Review voice note before sending"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={discardVoiceRecording}
+                className="rounded-xl border border-border px-3 py-2 text-sm font-semibold"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  discardVoiceRecording();
+                  void startVoiceRecording();
+                }}
+                className="rounded-xl border border-border px-3 py-2 text-sm font-semibold"
+              >
+                Record again
+              </button>
+              <button
+                type="button"
+                onClick={sendVoice}
+                disabled={typing}
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-40"
+              >
+                Send voice note
+              </button>
+            </div>
+          </div>
+        )}
+        {notice && (
+          <p
+            role="status"
+            className="mb-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
+          >
+            {notice}
+          </p>
+        )}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={selectPhoto}
+          className="hidden"
+          aria-label="Take a bill photo"
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          onChange={selectPhoto}
+          className="hidden"
+          aria-label="Choose a bill photo"
+        />
+        <div className="glass relative flex items-end gap-0.5 rounded-3xl border border-border p-1.5 sm:gap-1 sm:p-2">
+          {photoMenu && (
+            <div
+              role="group"
+              aria-label="Add a payment photo"
+              className="glass absolute bottom-[calc(100%+0.5rem)] left-1 z-10 w-52 rounded-2xl border border-border p-2 shadow-glow"
+              id="photo-options"
+            >
+              <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Add a photo</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoMenu(false);
+                  cameraInputRef.current?.click();
+                }}
+                className="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium hover:bg-accent"
+              >
+                <Camera className="h-4 w-4" /> Take a photo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoMenu(false);
+                  galleryInputRef.current?.click();
+                }}
+                className="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium hover:bg-accent"
+              >
+                <ImagePlus className="h-4 w-4" /> Choose from photos
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setPhotoMenu((open) => !open)}
+            aria-label="Add attachment"
+            aria-expanded={photoMenu}
+            aria-controls="photo-options"
+            title="Add attachment"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"
+          >
+            <Plus className="h-5 w-5" />
           </button>
-          <textarea ref={inputRef} rows={1} value={text} onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } }}
+          <textarea
+            ref={inputRef}
+            disabled={voiceMode === "recording"}
+            rows={1}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send(text);
+              }
+            }}
             placeholder="Message Nella…"
-            className="max-h-32 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] text-foreground placeholder:text-muted-foreground outline-none" />
+            aria-label="Message Nella"
+            className="max-h-32 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
+          />
           {text.trim() ? (
-            <button type="submit" disabled={typing} aria-label="Send" className="shadow-glow flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40">
+            <button
+              type="submit"
+              disabled={typing}
+              aria-label="Send message"
+              className="shadow-glow flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 sm:h-10 sm:w-10"
+            >
               <ArrowUp className="h-5 w-5" />
             </button>
           ) : (
-            <button type="button" aria-label="Voice note (coming soon)" title="Voice notes — coming soon" className="shadow-glow flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <button
+              type="button"
+              onClick={() =>
+                voiceMode === "recording" ? stopVoiceRecording() : void startVoiceRecording()
+              }
+              aria-label={
+                voiceMode === "recording" ? "Stop voice recording" : "Record a voice note"
+              }
+              title="Record a voice note"
+              disabled={voiceMode === "review"}
+              className={`shadow-glow flex h-10 w-10 shrink-0 items-center justify-center rounded-full disabled:opacity-40 ${
+                voiceMode === "recording"
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-primary text-primary-foreground"
+              }`}
+            >
               <Mic className="h-5 w-5" />
             </button>
           )}
         </div>
       </form>
-
-      {pinFor && <PinSheet user={user} onClose={() => setPinFor(null)} onOk={onPinOk} />}
     </div>
   );
 }
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between gap-4"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>;
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-muted-foreground">{k}</dt>
+      <dd className="text-right font-semibold text-foreground">{v}</dd>
+    </div>
+  );
 }
 
-function PinSheet({ user, onClose, onOk }: { user: DemoUser; onClose: () => void; onOk: () => void }) {
-  const [pin, setPin] = useState("");
-  const [err, setErr] = useState("");
-  const press = (d: string) => {
-    if (pin.length >= 4) return;
-    const next = pin + d;
-    setPin(next);
-    setErr("");
-    if (next.length === 4) {
-      if (checkPin(user, next)) setTimeout(onOk, 150);
-      else { setErr("Wrong PIN. Try again."); setTimeout(() => setPin(""), 300); }
-    }
-  };
+function QuickActionTile({
+  action,
+  onClick,
+  disabled,
+}: {
+  action: QuickAction;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  const Icon = action.icon;
+
   return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-background/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-[28px] border border-border bg-card p-6 pb-8" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <p className="font-bold">Enter your PIN</p>
-          <button onClick={onClose} aria-label="Close" className="rounded-full p-1 hover:bg-accent"><X className="h-5 w-5" /></button>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">Secure screen — your PIN is never shared in chat.</p>
-        <div className="my-6 flex justify-center gap-4">
-          {[0, 1, 2, 3].map((i) => <span key={i} className={`h-4 w-4 rounded-full border-2 border-primary ${i < pin.length ? "bg-primary" : ""}`} />)}
-        </div>
-        {err && <p className="-mt-3 mb-3 text-center text-sm text-destructive">{err}</p>}
-        <div className="grid grid-cols-3 gap-3">
-          {["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((k, i) =>
-            k === "" ? <span key={i} /> : (
-              <button key={i} onClick={() => (k === "⌫" ? setPin(pin.slice(0, -1)) : press(k))}
-                className="rounded-2xl bg-muted py-4 text-xl font-bold hover:bg-accent">{k}</button>
-            ))}
-        </div>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="glass flex min-h-32 w-full flex-col items-start gap-3 rounded-2xl border border-border p-4 text-left text-foreground transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-36"
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-glow">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">{action.label}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+          {action.description}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function ProfileAction({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-foreground hover:bg-accent"
+    >
+      <Icon className="h-4 w-4 text-muted-foreground" /> {label}
+    </button>
   );
 }
