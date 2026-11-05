@@ -8,12 +8,14 @@ export const SERVICE_LABELS: Record<MoneyService, string> = {
 /** Presentation-only intents. Existing detailed payment parsing remains unchanged. */
 export function panelForMessage(raw: string): AppPanel | null {
   const text = raw.trim().toLowerCase();
+  if (/\b(refund|dispute|complaint)\b/.test(text)) return "support";
+  if (/\b(forgot|reset|change)\s+(?:my\s+|payment\s+)?pin\b|\b(recover|freeze|unblock)\s+(?:my\s+)?account\b/.test(text)) return "security";
   if (/^(send money|transfer money)$/.test(text)) return "transfer";
   if (/^(buy airtime|recharge)$/.test(text)) return "airtime";
   if (/^(buy data|data plans)$/.test(text)) return "data";
   if (/^(pay a bill|pay bills|electricity)$/.test(text)) return "services";
   if (/^(cable|cable tv)$/.test(text)) return "cable";
-  if (/fund|account details|my account/.test(text)) return "account";
+  if (/\b(fund|funding)\b|\baccount details\b|\bmy account\b/.test(text)) return "account";
   if (/onboard|verify.*identity|verification|complete.*setup/.test(text)) return "onboarding";
   if (/notification|alerts/.test(text)) return "notifications";
   if (/recent activity|transaction history|receipts/.test(text)) return "activity";
@@ -23,7 +25,7 @@ export function panelForMessage(raw: string): AppPanel | null {
   if (/support|help|agent/.test(text)) return "support";
   if (/spending|insights|statement/.test(text)) return "insights";
   if (/invoice|payroll|business|payment request|bulk/.test(text)) return "business";
-  if (/refer|ambassador/.test(text)) return "referrals";
+  if (/\b(refer|referral|referrals|ambassador|ambassadors)\b/.test(text)) return "referrals";
   return null;
 }
 
