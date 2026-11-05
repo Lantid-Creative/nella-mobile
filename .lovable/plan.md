@@ -1,4 +1,4 @@
-# Nella mobile app: functionality, UI/UX, fixes and launch plan
+# Nella mobile plan
 
 ## Target experience
 
