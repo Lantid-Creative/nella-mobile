@@ -22,7 +22,9 @@ export function parsePaymentRequest(service: MoneyService, raw: string, customer
     : service === "airtime" || service === "data" ? /(?:\+?234[789][01]\d{8}|\b0[789][01]\d{8})\b/ : /\b\d{6,20}\b/)?.[0];
   if (number) {
     const phone = normalisePhone(number);
-    details.destination = service === "airtime" || service === "data" ? (phone ? `0${phone}` : undefined) : number;
+    if (service === "airtime" || service === "data") {
+      if (phone) details.destination = `0${phone}`;
+    } else details.destination = number;
   } else if ((service === "airtime" || service === "data") && /\b(?:for me|my (?:phone|number|line)|myself)\b/i.test(raw)) {
     const phone = customerPhone ? normalisePhone(customerPhone) : null;
     if (phone) details.destination = `0${phone}`;
@@ -32,7 +34,7 @@ export function parsePaymentRequest(service: MoneyService, raw: string, customer
   if (plan) details.plan = plan;
   // Remove recipient and plan numbers before looking for money. Bare numbers are
   // amounts only with payment context, currency or an unambiguous standalone reply.
-  const remainder = raw.replace(number ?? /$^/, "").replace(plan ?? /$^/, "").replace(/,/g, "");
+  const remainder = raw.replace(number ?? /$^/, "").replace(plan ?? /$^/, "").replace(provider ?? /$^/, "").replace(/,/g, "");
   const amount = remainder.match(/(?:₦|\bNGN\s*|\bnaira\s*|\b(?:send|transfer|pay|buy|recharge|amount|for|of)\s+)(\d+(?:\.\d{1,2})?)\s*(k)?\b/i)
     ?? remainder.match(/\b(\d+(?:\.\d{1,2})?)\s*(k)?\s*(?:naira|airtime|recharge)\b/i)
     ?? remainder.match(/^\s*(\d+(?:\.\d{1,2})?)\s*(k)?\s*$/i);
