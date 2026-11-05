@@ -52,7 +52,7 @@ function AuthPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "Fingerprint setup failed. Your PIN still works."); }
     finally { setBioBusy(false); }
   };
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault(); setError(""); setSuccess("");
     try {
       if (mode === "up" && step === 0) { setStep(1); return; }
@@ -81,7 +81,7 @@ function AuthPage() {
     <main className="auth-surface flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
         <header className="grid h-12 grid-cols-[minmax(0,1fr)_auto] items-center">
-          <div>{mode !== "in" && <Button variant="ghost" size="icon" aria-label="Go back" className="h-11 w-11 rounded-full" onClick={() => { if (mode === "up" && step > 0) { setStep(step - 1); setError(""); } else switchMode("in"); }}><ArrowLeft /></Button>}</div>
+          <div>{mode !== "in" && step !== 3 && <Button variant="ghost" size="icon" aria-label="Go back" className="h-11 w-11 rounded-full" onClick={() => { if (mode === "up" && step > 0) { setStep(step - 1); setError(""); } else switchMode("in"); }}><ArrowLeft /></Button>}</div>
           <span className="text-2xl font-extrabold text-primary">nella<span className="text-foreground">.</span></span>
         </header>
         {mode === "up" && <div aria-label={`Setup step ${step + 1} of 3`} className="mt-4 flex gap-2">{[0,1,2].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-border"}`} />)}</div>}
