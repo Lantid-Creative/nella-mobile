@@ -10,30 +10,30 @@ export type ApprovalCard = {
   amount: number;
   account: string;
   bank: string;
-  narration?: string;
+  narration?: string | undefined;
   status: "pending" | "approved" | "cancelled";
 };
 
 export type Card =
   | { kind: "preview"; preview: ReceiptPreview }
   | { kind: "balance"; amount: string }
-  | { kind: "narration"; pending: ApprovalCard; done?: boolean }
+  | { kind: "narration"; pending: ApprovalCard; done?: boolean | undefined }
   | ApprovalCard
   | { kind: "receipt"; title: string; amount: number; rows: [string, string][] };
 
 export type ChatMedia = {
   kind: "image" | "audio";
   label: string;
-  previewUrl?: string;
-  durationSeconds?: number;
+  previewUrl?: string | undefined;
+  durationSeconds?: number | undefined;
 };
 
 export type ChatMsg = {
   id: string;
   role: "user" | "nella";
-  text?: string;
-  card?: Card;
-  media?: ChatMedia;
+  text?: string | undefined;
+  card?: Card | undefined;
+  media?: ChatMedia | undefined;
   at: number;
 };
 
