@@ -1,4 +1,5 @@
 # Nella WhatsApp-to-app coverage
+- [x] Add in-app snap-to-pay camera with pinch/slider zoom (native lens zoom when supported, digital crop otherwise), review/retake, and native-camera fallback; verified in mobile browser flow.
 - [x] Replace payment-entry sheets with progressive chat conversations, in-chat edits/cancellation, photo/voice fallback and preview reuse; tests and mobile browser flow verified. Transcription, photo extraction and live payments remain unconnected.
 - [x] Continue frontend-only mobile building: guided payment steps, searchable preview activity, preview details/share/reuse, and mobile regression checks; all 24 tests passed, live connections deferred.
 - [x] Implement mobile reply cancellation, history-aware scrolling/pagination, sheet navigation/draft retention, storage validation, intent corrections and accessibility improvements.

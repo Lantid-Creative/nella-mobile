@@ -36,6 +36,7 @@ import {
 } from "@/lib/demo-store";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
+import { NellaCamera } from "@/components/nella-camera";
 import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
 import { panelForMessage, type AppPanel, type ReceiptPreview } from "@/lib/app-provisions";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -125,6 +126,7 @@ function ChatPage() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [notice, setNotice] = useState("");
   const [photoMenu, setPhotoMenu] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<{ file: File; url: string } | null>(null);
   const [voiceMode, setVoiceMode] = useState<"idle" | "recording" | "review">("idle");
   const [voiceUrl, setVoiceUrl] = useState("");
@@ -271,11 +273,9 @@ function ChatPage() {
     send(action.prompt);
   };
 
-  const selectPhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  const acceptPhoto = (file: File, url?: string) => {
     setPhotoMenu(false);
+    setCameraOpen(false);
     if (!file.type.startsWith("image/")) {
       setNotice("Choose an image file.");
       return;
@@ -285,10 +285,16 @@ function ChatPage() {
       return;
     }
     if (pendingPhoto) URL.revokeObjectURL(pendingPhoto.url);
-    const url = URL.createObjectURL(file);
-    objectUrlsRef.current.push(url);
-    setPendingPhoto({ file, url });
+    const photoUrl = url ?? URL.createObjectURL(file);
+    objectUrlsRef.current.push(photoUrl);
+    setPendingPhoto({ file, url: photoUrl });
     setNotice("");
+  };
+
+  const selectPhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) acceptPhoto(file);
   };
 
   const clearPhoto = () => {
@@ -763,7 +769,7 @@ function ChatPage() {
               type="button"
               onClick={() => {
                 clearPhoto();
-                cameraInputRef.current?.click();
+                setCameraOpen(true);
               }}
               className="min-h-11 rounded-lg px-2 py-2 text-xs font-semibold hover:bg-accent"
             >
@@ -848,6 +854,16 @@ function ChatPage() {
             {notice}
           </p>
         )}
+        {cameraOpen && (
+          <NellaCamera
+            onCapture={(file, url) => acceptPhoto(file, url)}
+            onClose={() => setCameraOpen(false)}
+            onFallback={() => {
+              setCameraOpen(false);
+              cameraInputRef.current?.click();
+            }}
+          />
+        )}
         <input
           ref={cameraInputRef}
           type="file"
@@ -879,7 +895,7 @@ function ChatPage() {
                 type="button"
                 onClick={() => {
                   setPhotoMenu(false);
-                  cameraInputRef.current?.click();
+                  setCameraOpen(true);
                 }}
                 className="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium hover:bg-accent"
               >
