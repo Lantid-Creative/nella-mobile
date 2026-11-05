@@ -6,31 +6,15 @@ A genuine mobile-first Nella money companion—not a generic AI chatbot. Custome
 
 **Current position:** the app is a browser-local demonstration. Payment preparation, mobile service sheets and local preview downloads exist. Live login, bank accounts, identity checks, transactions, notifications, real receipts and delivered support are not connected. The original Nella repository contains many of these execution paths, but source inspection does not verify that they are currently operating in production.
 
-## Priority 0 — Make the foundation safe and functional
+## Priority 0 — Safe, working foundation
 
-### 1. Real account access and secure onboarding
-- Replace browser-only accounts and recoverable local PIN storage with authenticated accounts and protected sessions. The current demo reset must never become real account recovery.
-- Verify ownership of the customer’s Nigerian phone number. Handle incorrect/expired codes, resend, existing accounts, changed numbers, lost devices and session expiry.
-- Separate app access from payment authorization. Offer device biometrics only as a supported convenience, with secure fallback; never treat a browser check as bank authorization.
-- Keep onboarding progressive: welcome → phone verification → identity details → private PIN → bank verification outcome → chat. Support save/resume, retry and help without starting over.
-- Match the source’s applicable onboarding version: NIN and BVN (11 digits), real date of birth and 18+ check, home address, private four-digit PIN, verified/preferred name handling. Keep sensitive inputs out of chat and analytics.
-- Show pending, failed, action-required and completed verification distinctly. A demo profile is not an opened bank account.
-- Add consent, privacy/terms links and account-opening disclosures using approved business wording—not invented licences or assurances.
+**Account access:** replace plaintext browser PINs, editable sessions and phone-only demo reset with server-verified authentication and recovery. Verify phone ownership; handle expired codes, resend, existing accounts, lost devices, number changes and revoked sessions. Device biometrics must not substitute for bank authorization.
 
-### 2. Connect the approved Nella money services
-- Establish a supported, authenticated connection to the original Nella service rather than copying credentials or duplicating its ledger.
-- Resolve how WhatsApp and app identities map to the same customer. Both channels must see the same balance, transaction, support and account status.
-- Connect account details, verified balance, funding alerts, bank lookup, recipient-name enquiry, fees, bill catalogues and transaction history.
-- Enforce account ownership, eligibility, roles and financial rules on the server. An AI interpretation or editable phone number must never grant access.
-- Keep demo and real environments clearly separated; test with approved test accounts before controlled real-account checks.
+**Progressive onboarding:** welcome → phone verification → private identity form → private PIN → bank result → chat. Match the applicable source onboarding version: 11-digit NIN/BVN, valid DOB and 18+ check, home address, four-digit PIN and verified/preferred name. Support resume/retry/help and pending/failed/action-required outcomes. Keep identity/PIN data out of chat and analytics. Use approved consent/disclosures; a demo profile is not a bank account.
 
-### 3. Safe money movement and accurate status
-- Complete the flow: request → missing details → verified recipient/product → amount and fees → review/edit/cancel → private approval → submission → final result.
-- Display recipient name, destination, amount, each charge and total debit before authorization. Preserve the source’s quote-expiry behavior; refresh an expired quote rather than silently reusing it.
-- Prevent duplicate execution from double-taps, network retries, app reopening, or requests arriving from both channels.
-- Represent processing, held, unknown, successful, failed and reversed states separately. Never turn a timeout into a success or invite another payment while the first is uncertain.
-- Preserve reconciliation, bill-refund handling and electricity token-pending recovery. Receipt-rendering failure must not change a successful payment into a failed one.
-- Match the source’s current applicable rules, including the ₦100 bank-transfer minimum, rather than old marketing or tier-limit copy.
+**Shared Nella services:** connect the approved source service, not copied credentials or a competing ledger. Map WhatsApp and app identities to the same customer and account. Connect balance/funding, name enquiry, fees, bill catalogues, transaction history and support. Enforce ownership, eligibility and financial rules server-side; AI interpretation is never authorization.
+
+**Money safety:** request → missing details → verified recipient/product → fee-inclusive quote → review/edit/cancel → private approval → submit once → actual outcome. Preserve source quote expiry and current minimums, including ₦100 for bank transfers. Prevent duplicates from taps, retries or both channels. Distinguish processing/held/unknown/success/failed/reversed. Recover ambiguous results, refunds and pending tokens; never invite blind retry. Receipt-generation failure cannot undo success.
 
 ## Priority 1 — Complete customer functionality
 
@@ -92,19 +76,13 @@ Sequence eligible business account/KYB → invoices/payment requests/collections
 
 Referrals/ambassadors require actual eligibility, attribution and rewards activation. Do not promise reward amounts. Do not advertise personal recurring transfers, card funding, automated subscription charging/broadcasts, complete storefront checkout, ticket sales, savings, crypto or cross-border payments as delivered; the source does not establish these as completed services.
 
-## Mobile delivery decision
+## Mobile delivery and technical decisions
 
-The current TanStack app is mobile web, not React Native and not an App Store/Play Store package. Keep this supported stack for the current work. Before release, choose between home-screen web installation and a separately packaged native-wrapper route. Store distribution, native push, secure device storage, biometrics, deep links and release signing require their own implementation and real-device verification; a resized browser preview does not prove them.
+This TanStack app is mobile web, not React Native or an App Store/Play Store package. Preserve the supported stack now; before release choose home-screen web installation or a separately packaged native-wrapper route. Store releases, native push, secure device storage, biometrics and deep links need separate implementation and real-device testing. A resized preview does not prove them.
 
-Do not add offline financial execution. If installability is chosen, start with app icons/home-screen metadata; offline caching is a separate scope and must never expose another account’s data or stale financial truth.
+If installation is chosen, begin with icons/home-screen metadata. Offline caching is separate scope; never add offline financial execution or expose cached personal data as current truth.
 
-## Technical implementation details
-
-- Use the existing TanStack route structure and design-system controls. Keep secure account/payment operations server-owned and chat-triggered presentations separate from financial execution.
-- Choose a single authoritative Nella ledger and account service. Implement authenticated channel adapters and persistent conversations, notifications and support linkage; provision Lovable Cloud where new app-owned persistence is needed.
-- Use protected server functions, verified provider callbacks, least-privilege access, idempotency and durable reconciliation/recovery. Reuse the source’s financial contracts—not unverified deployment configuration.
-- Define notification and transaction models once; update chat, activity, receipts and push from the same events.
-- Keep customer-facing financial rules covered by concrete tests, including approval expiry, minimums, recovery cooldown, ownership and duplicate submission.
+Use one authoritative Nella ledger/account service, authenticated channel adapters and durable conversation/notification/support state. Provision Lovable Cloud for new app-owned persistence if needed. Keep financial operations in protected server functions with verified callbacks, least privilege, idempotency and reconciliation. Chat/activity/receipts/push must read the same event state. Test every financial rule, ownership, quote expiry, recovery cooldown and duplicate submission.
 
 ## Recommended execution order and acceptance gates
 
