@@ -1,5 +1,5 @@
 # Nella WhatsApp-to-app coverage
-- [ ] Require post-signup demo KYC identity/address steps before chat, preserve biometric/PIN entry gates, and verify mobile signup and recovery.
+- [x] Require post-signup demo KYC identity/address review before chat; verified signup, direct-entry blocking, recovery and legacy-account gates at 320/393/1280 widths; all 48 tests pass. Live identity verification remains blocked by the absent secure provider connection.
 - [x] Require onboarding completion before chat; verified mobile signup, direct-entry blocking, refresh recovery and completed-account entry, with 18 account/biometric/approval tests passing.
 - [x] Add fingerprint/face unlock (WebAuthn platform authenticator): optional setup after signup, manage in Security & PIN, unlock button on login, PIN fallback preserved; verified with a virtual authenticator on mobile viewport.
 - [x] Replace downloadable previews with simple payment breakdowns in chat and prepared-payment details; remove download/share actions, preserve PIN approval, and verify mobile flow plus 39 tests.
