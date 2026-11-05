@@ -891,6 +891,15 @@ function ChatPage() {
             </div>
           </div>
         )}
+        {replyingTo && (
+          <div className="mb-2 flex items-center gap-2 rounded-2xl border-l-4 border-primary bg-muted px-3 py-2">
+            <div className="min-w-0 flex-1 text-xs">
+              <p className="font-semibold text-foreground">Replying to {replyingTo.role === "user" ? "yourself" : "Nella"}</p>
+              <p className="truncate text-muted-foreground">{quoteText(replyingTo.text ?? replyingTo.media?.label)}</p>
+            </div>
+            <Button variant="ghost" size="none" type="button" aria-label="Cancel reply" onClick={() => setReplyingTo(null)} className="h-11 w-11 rounded-full"><X className="h-4 w-4" /></Button>
+          </div>
+        )}
         {notice && (
           <p
             role="status"
