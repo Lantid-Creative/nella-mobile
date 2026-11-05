@@ -45,6 +45,7 @@ import { panelForMessage, paymentPreview, type AppPanel, type ReceiptPreview } f
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { usePendingReply, isNearConversationBottom, shouldSendOnEnter } from "@/hooks/use-chat-behavior";
 import { useServiceNavigation } from "@/hooks/use-service-navigation";
+import { useChatViewport } from "@/hooks/use-chat-viewport";
 import { STORAGE_NOTICE } from "@/lib/demo-storage";
 import { answerPayment, startPayment, paymentService, type PaymentConversation } from "@/lib/chat-payments";
 import { SERVICE_LABELS, type PaymentDraft } from "@/lib/app-provisions";
@@ -137,7 +138,6 @@ function ChatPage() {
   const [voiceUrl, setVoiceUrl] = useState("");
   const [voiceDuration, setVoiceDuration] = useState(0);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -148,6 +148,11 @@ function ChatPage() {
   const recordingFailedRef = useRef(false);
   const recordingStartRef = useRef(0);
   const objectUrlsRef = useRef<string[]>([]);
+  useChatViewport(scrollRef, followsBottom);
+  const scrollToLatest = (behavior: ScrollBehavior = "auto") => {
+    const conversation = scrollRef.current;
+    conversation?.scrollTo({ top: conversation.scrollHeight, behavior });
+  };
 
   useEffect(() => {
     const u = currentUser();
@@ -169,26 +174,12 @@ function ChatPage() {
   }, []);
 
   useEffect(() => {
-    const updateHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight;
-      document.documentElement.style.setProperty("--app-height", `${height}px`);
-    };
-    updateHeight();
-    window.visualViewport?.addEventListener("resize", updateHeight);
-    window.addEventListener("resize", updateHeight);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", updateHeight);
-      window.removeEventListener("resize", updateHeight);
-      document.documentElement.style.removeProperty("--app-height");
-    };
-  }, []);
-
-  useEffect(() => {
     const scrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
       ? "auto"
       : "smooth";
     if (followsBottom.current) {
-      endRef.current?.scrollIntoView({ behavior: scrollBehavior, block: "end" });
+      const conversation = scrollRef.current;
+      conversation?.scrollTo({ top: conversation.scrollHeight, behavior: scrollBehavior });
       setNewMessages(false);
     } else setNewMessages(true);
   }, [msgs, typing]);
@@ -448,7 +439,7 @@ function ChatPage() {
   const empty = msgs.length === 0;
 
   return (
-    <div className="chat-surface mx-auto flex h-[var(--app-height,100dvh)] min-h-0 max-w-3xl flex-col overflow-hidden">
+    <div className="chat-surface mx-auto flex h-[var(--app-height,100dvh)] min-h-0 w-full max-w-3xl flex-col overflow-hidden">
       {approval && approval === payment && <PaymentApproval receipt={paymentPreview(approval.draft, user.name)} user={user} onClose={() => setApproval(null)} onComplete={() => {
         setApproval(null);
         setPayment(null);
@@ -573,7 +564,7 @@ function ChatPage() {
       >
         {empty ? (
           <div className="flex min-h-full flex-col items-center justify-center pb-4 pt-5 text-center">
-            <NellaMascot className="mb-3 h-36 w-36" />
+            <NellaMascot className="chat-welcome-mascot mb-3 h-36 w-36 shrink-0" />
             <span className="mb-3 rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-primary">YOUR MONEY, IN A CHAT</span>
             <h1 className="text-2xl font-extrabold">Hi, {first} <span aria-hidden="true">👋</span></h1>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">I'm Nella. What can I help you with today?</p>
@@ -765,10 +756,10 @@ function ChatPage() {
                   <p className="border-b border-border/60 px-4 py-2 text-xs font-medium text-muted-foreground">Tap to choose</p>
                   <div className="max-h-72 overflow-y-auto">
                     {chatChoices.map(choice => (
-                      <button key={choice} type="button" role="option" aria-selected="false" className="flex min-h-11 w-full items-center justify-between gap-2 border-b border-border/40 px-4 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent/50 active:bg-accent" onClick={() => send(choice)}>
+                      <Button variant="plain" size="none" key={choice} type="button" role="option" aria-selected="false" className="flex min-h-11 w-full items-center justify-between gap-2 whitespace-normal border-b border-border/40 px-4 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent/50 active:bg-accent" onClick={() => send(choice)}>
                         <span className="min-w-0 flex-1">{choice}</span>
                         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -776,22 +767,21 @@ function ChatPage() {
                 <div className="flex flex-wrap gap-2 pl-9" aria-label="Chat replies">{chatChoices.map(choice => <Button key={choice} variant="outline" className="min-h-11 max-w-full whitespace-normal" onClick={() => send(choice)}>{choice}</Button>)}</div>
               )
             )}
-            <div ref={endRef} />
           </div>
         )}
       </main>
 
-      {newMessages && <Button variant="secondary" className="mx-auto my-2 h-11 shrink-0" onClick={() => { followsBottom.current = true; setNewMessages(false); endRef.current?.scrollIntoView({ block: "end" }); }}><ArrowDown />New messages</Button>}
+      {newMessages && <Button variant="secondary" className="mx-auto my-2 h-11 shrink-0" onClick={() => { followsBottom.current = true; setNewMessages(false); scrollToLatest(); }}><ArrowDown />New messages</Button>}
       <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={(draft: PaymentDraft) => { changePanel(null); if (reply.busy.current) return; const turn = startPayment(draft.service, "", user.name, draft); setPayment(turn.state); setChatChoices(turn.choices ?? []); if (turn.preview) keepPreview(turn.preview); nellaSays([{ text: turn.text }]); }} />
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
           send(text);
         }}
-        className="mx-auto w-full max-w-2xl shrink-0 border-t border-border bg-card px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5"
+        className="chat-composer mx-auto w-full max-w-2xl shrink-0 border-t border-border bg-card px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5"
       >
         {pendingPhoto && (
-          <div className="glass mb-2 flex items-center gap-3 rounded-2xl border border-border p-3">
+          <div className="glass mb-2 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-border p-3 sm:flex">
             <img
               src={pendingPhoto.url}
               alt="Selected photo"
@@ -803,6 +793,7 @@ function ChatPage() {
                 Review your photo before attaching it.
               </p>
             </div>
+            <div className="col-span-2 flex justify-end gap-2 sm:contents">
             <Button variant="plain" size="none"
               type="button"
               onClick={() => {
@@ -829,6 +820,7 @@ function ChatPage() {
             >
               Attach
             </Button>
+            </div>
           </div>
         )}
         {voiceMode === "recording" && (
@@ -964,6 +956,7 @@ function ChatPage() {
           </Button>
           <textarea
             ref={inputRef}
+            onFocus={() => { setPhotoMenu(false); if (followsBottom.current) requestAnimationFrame(() => scrollToLatest()); }}
             disabled={voiceMode === "recording"}
             rows={1}
             value={text}
