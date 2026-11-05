@@ -2,6 +2,7 @@
 
 ## Completed in this app
 - Payment preparation now takes place entirely in chat, replacing the earlier recipient/detail forms: progressive prompts, editable amounts/recipients/providers/plans, cancellation and in-chat previews. Preview reuse also returns directly to chat. Photo and voice attachments remain honest manual-chat fallbacks until extraction/transcription is connected.
+- Snap-to-pay now opens an in-app camera with pinch-to-zoom and a zoom slider (native lens zoom where the device supports it, otherwise a digital crop applied at capture), plus review/retake and a native-camera fallback when the in-app camera is unavailable or denied.
 - Guided recipient → payment details → review preparation for all five services, with editable recipients/amounts and no payment submission.
 - Searchable, service-filtered preview activity with detail view, download, device sharing or clipboard fallback, and editable-detail reuse. These remain distinct from verified transactions.
 - Cancellable delayed replies with synchronous overlap prevention; clear/logout/unmount cannot append a late reply.
