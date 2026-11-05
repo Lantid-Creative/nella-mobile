@@ -1,5 +1,7 @@
 // Demo-only storage in this browser. No real bank, no real money.
 import type { ReceiptPreview } from "./app-provisions";
+import { z } from "zod";
+import { readDemoValue, writeDemoValue, removeDemoValue, STORAGE_NOTICE } from "./demo-storage";
 export type DemoUser = { name: string; phone: string; pin: string };
 
 export type ApprovalCard = {
@@ -39,13 +41,24 @@ const USERS = "nella.users.v2";
 const SESSION = "nella.session.v2";
 const chatKey = (phone: string) => `nella.chat.v2.${phone}`;
 
-const read = <T>(k: string, fallback: T): T => {
-  try {
-    const v = localStorage.getItem(k);
-    return v ? (JSON.parse(v) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+const userSchema = z.object({ name: z.string().trim().min(1), phone: z.string().regex(/^[789][01]\d{8}$/), pin: z.string().regex(/^\d{4}$/) });
+const approvalSchema = z.object({ kind: z.literal("approval"), service: z.enum(["transfer", "airtime", "data"]), amount: z.number().finite().positive(), account: z.string(), bank: z.string(), narration: z.string().optional(), status: z.enum(["pending", "approved", "cancelled"]) });
+const receiptSchema = z.object({ title: z.string(), amount: z.number().finite().positive(), rows: z.array(z.tuple([z.string(), z.string()])) });
+const messageSchema = z.object({
+  id: z.string(), role: z.enum(["user", "nella"]), text: z.string().optional(), at: z.number().finite(),
+  card: z.union([approvalSchema, z.object({ kind: z.literal("preview"), preview: receiptSchema }), z.object({ kind: z.literal("balance"), amount: z.string() }), z.object({ kind: z.literal("narration"), pending: approvalSchema, done: z.boolean().optional() }), receiptSchema.extend({ kind: z.literal("receipt") })]).optional(),
+  media: z.object({ kind: z.enum(["image", "audio"]), label: z.string(), previewUrl: z.string().optional(), durationSeconds: z.number().finite().optional() }).optional(),
+});
+const readUsers = (): DemoUser[] => {
+  const raw = readDemoValue(USERS);
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap(value => { const parsed = userSchema.safeParse(value); return parsed.success ? [parsed.data] : []; });
+};
+const persistUsers = (users: DemoUser[]) => {
+  if (!writeDemoValue(USERS, users)) throw new Error(STORAGE_NOTICE);
+};
+const setSession = (phone: string) => {
+  try { localStorage.setItem(SESSION, phone); } catch { throw new Error(STORAGE_NOTICE); }
 };
 
 /** Normalise Nigerian numbers to 10 digits after +234 (e.g. 8012345678). */
@@ -60,19 +73,19 @@ export function signUp(name: string, phoneRaw: string, pin: string) {
   const phone = normalisePhone(phoneRaw);
   if (!phone) throw new Error("Enter a valid Nigerian phone number.");
   if (!/^\d{4}$/.test(pin)) throw new Error("Your PIN must be 4 digits.");
-  const users = read<DemoUser[]>(USERS, []);
+  const users = readUsers();
   if (users.some((u) => u.phone === phone))
     throw new Error("This number already has an account. Log in instead.");
   users.push({ name: name.trim(), phone, pin });
-  localStorage.setItem(USERS, JSON.stringify(users));
-  localStorage.setItem(SESSION, phone);
+  persistUsers(users);
+  setSession(phone);
 }
 
 export function signIn(phoneRaw: string, pin: string) {
   const phone = normalisePhone(phoneRaw);
-  const u = read<DemoUser[]>(USERS, []).find((x) => x.phone === phone);
+  const u = readUsers().find((x) => x.phone === phone);
   if (!u || u.pin !== pin) throw new Error("Wrong phone number or PIN.");
-  localStorage.setItem(SESSION, u.phone);
+  setSession(u.phone);
 }
 
 export function resetDemoPin(phoneRaw: string, pin: string) {
@@ -80,20 +93,21 @@ export function resetDemoPin(phoneRaw: string, pin: string) {
   if (!phone) throw new Error("Enter the phone number used for this demo account.");
   if (!/^\d{4}$/.test(pin)) throw new Error("Your new PIN must be 4 digits.");
 
-  const users = read<DemoUser[]>(USERS, []);
+  const users = readUsers();
   const user = users.find((candidate) => candidate.phone === phone);
   if (!user) throw new Error("No demo account was found for this number in this browser.");
 
   user.pin = pin;
-  localStorage.setItem(USERS, JSON.stringify(users));
+  persistUsers(users);
 }
 
-export const signOut = () => localStorage.removeItem(SESSION);
+export const signOut = () => removeDemoValue(SESSION);
 
 export function currentUser(): DemoUser | null {
-  const p = localStorage.getItem(SESSION);
+  let p: string | null;
+  try { p = localStorage.getItem(SESSION); } catch { return null; }
   if (!p) return null;
-  return read<DemoUser[]>(USERS, []).find((u) => u.phone === p) ?? null;
+  return readUsers().find((u) => u.phone === p) ?? null;
 }
 
 export const checkPin = (u: DemoUser, pin: string) => u.pin === pin;
@@ -111,8 +125,10 @@ const LEGACY_CHAT_COPY: Record<string, string> = {
     "Support chat is currently unavailable.",
 };
 
-export const loadChat = (phone: string) =>
-  read<ChatMsg[]>(chatKey(phone), []).map((message): ChatMsg => {
+export const loadChat = (phone: string) => {
+  const raw = readDemoValue(chatKey(phone));
+  const messages: ChatMsg[] = Array.isArray(raw) ? raw.flatMap(value => { const parsed = messageSchema.safeParse(value); return parsed.success ? [parsed.data] : []; }) : [];
+  return messages.map((message): ChatMsg => {
     if (!message.media) {
       if (message.text === undefined) return message;
       const migratedText = LEGACY_CHAT_COPY[message.text];
@@ -127,6 +143,7 @@ export const loadChat = (phone: string) =>
     }
     return migratedMessage;
   });
+};
 
 export const saveChat = (phone: string, msgs: ChatMsg[]) => {
   const persistentMessages = msgs.map((message) => {
@@ -135,7 +152,7 @@ export const saveChat = (phone: string, msgs: ChatMsg[]) => {
     media.label = message.media.kind === "image" ? "Image attachment" : "Voice attachment";
     return { ...message, media };
   });
-  localStorage.setItem(chatKey(phone), JSON.stringify(persistentMessages));
+  return writeDemoValue(chatKey(phone), persistentMessages);
 };
 
 export const naira = (n: number) =>
