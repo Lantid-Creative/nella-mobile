@@ -386,13 +386,6 @@ function ChatPage() {
                 <p className="font-bold">{user.name}</p>
                 <p className="text-xs text-muted-foreground">+234 {user.phone}</p>
               </div>
-              <Button variant="plain" size="none"
-                onClick={() => setMenu(false)}
-                aria-label="Close profile menu"
-                className="rounded-full p-1 text-muted-foreground hover:bg-accent"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
             <div className="my-3 h-px bg-border" />
             <ProfileAction
@@ -472,7 +465,7 @@ function ChatPage() {
                 signOut();
                 navigate({ to: "/", replace: true });
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
+              className="flex min-h-11 w-full items-center justify-start gap-3 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
             >
               <LogOut className="h-4 w-4" /> Log out
             </Button>
@@ -942,7 +935,7 @@ function ProfileAction({
   return (
     <Button variant="plain" size="none"
       onClick={onClick}
-      className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-foreground hover:bg-accent"
+      className="flex min-h-11 w-full items-center justify-start gap-3 rounded-lg px-2 py-2 text-left text-sm text-foreground hover:bg-accent"
     >
       <Icon className="h-4 w-4 text-muted-foreground" /> {label}
     </Button>
