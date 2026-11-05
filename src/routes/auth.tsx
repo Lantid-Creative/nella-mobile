@@ -86,6 +86,16 @@ function AuthPage() {
         </header>
         {mode === "up" && <div aria-label={`Setup step ${step + 1} of 3`} className="mt-4 flex gap-2">{[0,1,2].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-border"}`} />)}</div>}
         <div key={`${mode}-${step}`} className="step-enter flex flex-1 flex-col justify-center py-5">
+          {mode === "up" && step === 3 ? <div className="flex flex-1 flex-col justify-center">
+            <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-secondary"><Fingerprint className="h-14 w-14 text-primary" /></div>
+            <h1 className="mt-6 text-[28px] font-extrabold leading-tight">Unlock with your fingerprint.</h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Next time you open Nella, use your fingerprint or face instead of your PIN. Your payment PIN stays separate and is never replaced.</p>
+            {error && <p role="alert" className="mt-5 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+            <div className="mt-7 space-y-3">
+              <Button className="h-13 w-full rounded-xl font-bold shadow-glow" disabled={bioBusy} onClick={() => void setupBiometrics()}>{bioBusy ? "Waiting for your device…" : "Set up fingerprint unlock"}<Fingerprint /></Button>
+              <Button variant="ghost" className="h-12 w-full" onClick={() => navigate({ to: "/chat" })}>Maybe later</Button>
+            </div>
+          </div> : <>
           <div className="mb-5 flex items-center gap-3">
             <NellaMascot className={mode === "up" && step === 0 ? "h-44 w-44 mx-auto" : "h-24 w-24"} />
             {!(mode === "up" && step === 0) && <span className="rounded-xl rounded-bl-none bg-secondary px-4 py-2 text-sm font-semibold text-primary">{mode === "in" ? "Good to see you 👋" : step === 2 ? "Almost there!" : "Hello there 👋"}</span>}
