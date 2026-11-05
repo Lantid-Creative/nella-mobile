@@ -741,7 +741,7 @@ function ChatPage() {
       </main>
 
       {newMessages && <Button variant="secondary" className="mx-auto my-2 h-11 shrink-0" onClick={() => { followsBottom.current = true; setNewMessages(false); endRef.current?.scrollIntoView({ block: "end" }); }}><ArrowDown />New messages</Button>}
-      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={(draft: PaymentDraft) => { changePanel(null); if (reply.busy.current) return; const turn = startPayment(draft.service, "", user.name, draft); setPayment(turn.state); setChatChoices(turn.choices ?? []); keepPreview(turn.preview ?? { title: SERVICE_LABELS[draft.service], amount: Number(draft.amount), rows: [] }); nellaSays([{ text: turn.text }]); }} />
+      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={(draft: PaymentDraft) => { changePanel(null); if (reply.busy.current) return; const turn = startPayment(draft.service, "", user.name, draft); setPayment(turn.state); setChatChoices(turn.choices ?? []); if (turn.preview) keepPreview(turn.preview); nellaSays([{ text: turn.text }]); }} />
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
