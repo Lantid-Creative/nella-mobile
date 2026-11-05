@@ -32,66 +32,65 @@ A genuine mobile-first Nella money companion—not a generic AI chatbot. Custome
 - Preserve reconciliation, bill-refund handling and electricity token-pending recovery. Receipt-rendering failure must not change a successful payment into a failed one.
 - Match the source’s current applicable rules, including the ₦100 bank-transfer minimum, rather than old marketing or tier-limit copy.
 
-## Priority 1 — Complete the essential customer journeys
+## Priority 1 — Complete customer functionality
 
-| Area | Required app experience |
+| Area | Required mobile experience |
 |---|---|
-| Funding and balance | Real account holder/bank/number, copy/share details, balance visibility control, incoming-credit updates; never generate a fake funding destination. |
-| Transfers | Bank and registered Nella phone-number transfers, verified recipient, optional narration, fee-inclusive quote, balance checks, edit/cancel, private authorization and result. |
-| Airtime | Self/other number, network selection, amount, quote, authorization and fulfilment. |
-| Data | Live network bundle list with price, allowance and validity; no assumption that free-form amount identifies a valid bundle. |
-| Electricity/cable | Supported biller, meter/smartcard, customer validation, prepaid/postpaid or actual package, amount, token/units when supplied and token-pending follow-up. |
-| Beneficiaries | Verified save, alias search, rename/tag/delete, collision handling and saved bill numbers; optional save after successful payment. |
-| Activity | Search/filter, real dates and statuses, full transaction detail, charges, reference, timeline, receipt retrieval and transaction-linked help. Clearing chat must not delete financial records. |
-| Receipts/statements | Branded confirmed PNG receipts, download/share, historical reference lookup, PDF statements; mark previews separately. Source statement default is 90 days with 1–365-day support. |
-| Notifications | Durable inbox, unread state, event-to-transaction links, in-chat updates, device push consent and delivery; no sensitive lock-screen content by default. |
-| Support/disputes | Submit category/reference/details, see replies and case state, human takeover, return to Nella, link disputed transaction. Complaints do not automatically reverse money. |
-| Security/recovery | Private PIN setup/change/reset, lock/cooldown handling, device/session management, verified number change, account protection and human escalation. Source recovery’s transfer pause must remain visible and enforced. |
-| Insights | Real spending/income summaries and statement periods; no invented spending figures, advice or savings product. |
-| Voice/photos | Permission, review, upload progress, transcription or extracted details, correction, removal and failure recovery; payment approval always remains mandatory. |
+| Funding/balance | Verified account details, copy/share, balance privacy, confirmed credit updates. |
+| Transfers | Bank and Nella phone transfers; verified name, fees, narration, edit/cancel, private authorization, final result. |
+| Airtime/data | Self/other number, network, live bundles with price/allowance/validity, approved purchase. |
+| Electricity/cable | Live biller/product, meter/smartcard and customer validation, prepaid/postpaid, confirmed result, token/units and token-pending recovery. |
+| Beneficiaries | Verified save, aliases/search, rename/tag/delete, saved bill numbers. |
+| Activity/receipts | Search/filter, dates, charges, status timeline, reference lookup, branded confirmed PNG download/share; previews remain separate. |
+| Statements/insights | Ledger-backed income/spending and PDF statements; source default 90 days, supported range 1–365. |
+| Notifications | Durable inbox, unread state, transaction links, device permission, push delivery; privacy on lock screen. |
+| Support/disputes | Send category/reference/details, replies/case state, human takeover, return to bot; no automatic reversal. |
+| Recovery/security | Private PIN forms, verified recovery, lock/cooldown visibility, device sessions, number change and account protection. |
+| Voice/photos | Permission, bounded upload, review, transcription/extraction, correction and retry; mandatory payment approval. |
 
-### Notification events to cover
-- Account verification/opening and action-required updates.
-- Confirmed money received; transfer/purchase result, reversal/refund, receipt ready and electricity token ready.
-- Support replies, security events and approved account-move requests.
-- Eligible business invoice/payment/approval events.
-- Separate essential account alerts from optional reminders/promotions. Preserve source onboarding pause/opt-out rules and quiet hours where applicable; WhatsApp’s messaging-window restriction is not the app’s push-delivery rule.
+Cover account-opening events, incoming credits, payment outcomes, reversals/refunds, receipts/tokens, support replies, security and eligible business approvals/invoice reminders. Separate essential alerts from optional reminders/promotions; preserve source opt-outs/quiet hours. WhatsApp’s messaging-window rule is not an app push rule.
 
-## Priority 1 — Mobile UI and UX fixes
+## Priority 1 — Concrete fixes found in the current app
 
-### Chat and navigation
-- Keep the composer reachable above the keyboard; respect notches, home indicators, font scaling and Android back behavior.
-- Stop forcing focus or scrolling after every reply. Scroll to new messages only when the customer is already near the bottom; otherwise show a new-message indicator.
-- Persist in-progress conversation and payment steps safely. Recover after refresh, lock/unlock, backgrounding and reconnecting.
-- Make suggestions context-aware: new-account completion, returning conversation, pending payment and first funding should not look identical.
-- Keep Nella warm but restrained: mascot greetings and short status motion, reduced-motion support, no animation distracting from approvals.
-- Consolidate duplicated access points and shorten the profile list. Surface only relevant personal/business tools; keep unsupported features out of everyday payment choices.
+These are source findings; keyboard/overflow risks still require device testing. Details: `docs/mobile-readiness-fixes.md`.
 
-### Service sheets and forms
-- Give every multi-step sheet a visible title, consistent back/close controls and a stable primary action. Avoid overlapping sheets and controls.
-- Keep the amount/recipient visible during review; lengthy receipt details must not hide the decision or close control.
-- Use searchable banks/billers, actual plan selectors, self/other choices and clear inline errors—not long static dropdowns or free-text product guesses.
-- Preserve fields when going back; confirm dismissal only when work would be lost. Distinguish canceling a draft from reversing a submitted transaction.
-- Replace repeated technical “not connected” explanations with concise availability states while preserving honest demo labeling.
-- Use familiar icons with accessible names, comfortable touch targets (at least 44 CSS pixels), clear contrast and non-color status cues.
-- Test screen readers, external keyboards, focus return, enlarged text and long names/references. Mask balances and sensitive values consistently.
+1. Cancel delayed replies on clear/logout/unmount; do not automatically focus the composer after every reply or underneath a sheet.
+2. Stop scrolling customers away from older messages. Follow the bottom only when appropriate; otherwise show a new-message indicator.
+3. Preserve payment/support drafts when changing sheets; add consistent parent navigation and handle Android/browser Back before leaving chat.
+4. Size sheets to the keyboard-visible space; keep title, Back, Close and primary actions reachable. Separate fixed navigation from scrolling details.
+5. Validate stored data and handle blocked/full storage; malformed valid JSON must not crash startup or silently lose saved state.
+6. Correct chat intent routing: “refund” currently matches funding; “forgot PIN”/“recover account” miss security. Cover these with regression tests.
+7. Wrap long names/references/amounts and bound input lengths. Test 200% text, small screens and long unbroken values.
+8. Preserve input-method composition, visible focus, multiline entry, 44px touch targets and reduced motion for all status animations.
+9. Shorten the profile list and consolidate duplicate access points; show only relevant personal/business tools.
+10. Replace static providers/free-text plans with real searchable catalogues once connected. Use concise unavailable states rather than repetitive technical explanations.
 
-## Priority 2 — Performance, resilience and maintainability
-- Split large chat/service files into focused, testable features without changing the existing payment behavior accidentally.
-- Load older conversations incrementally; paginate lists and avoid mounting every message forever.
-- Cancel stale reply work, prevent simultaneous operations and recover controls from failures. Handle storage unavailable/full rather than silently losing state.
-- Compress/resize images, bound audio duration/upload size, support cancellation, release media resources and preserve attachment availability through secure storage.
-- Cache public catalogues appropriately, but never present cached balance or status as current. Clear personal caches on logout and account switching.
-- Design for slow Nigerian mobile networks, short disconnects and app lifecycle changes. Never automatically replay an offline money instruction.
-- Instrument startup, chat latency, quote/approval errors, provider failures and crash reports without collecting PINs, identity numbers or sensitive message content.
-- Suggested validation targets, to agree before implementation: usable first screen within three seconds on representative mid-range hardware/4G; visible tap feedback within 100 ms; prompt acknowledgement within one second even when processing takes longer.
+## Mobile design rules
 
-## Priority 2 — Business and growth, without overwhelming personal chat
-- Add business access only for eligible customers, with personal/business switching and source-equivalent role restrictions.
-- Sequence KYB/account activation → invoices and payment requests → collection history/reminders → withdrawals and owner-approved bulk/payroll with per-line results.
-- Keep full merchant catalogue/POS, stock/orders, customer records, delivery/coupons/events, plan usage and partner integration administration in dedicated business experiences where needed—not the normal personal onboarding.
-- Add real referral codes and ambassador intake only after eligibility, attribution and rewards activation are confirmed. Do not promise reward rates.
-- Do not advertise personal recurring transfers, card funding, automatic subscription charging, broadcast dispatch, storefront checkout, ticket sales, savings, crypto or cross-border payments as implemented; the audited source does not establish them as completed services.
+- Composer above keyboard; safe areas, notches and home indicators respected.
+- Stable titles/back/close/actions, no overlapping sheets or unexpected discarded work.
+- Clear pending/error/empty/offline states with a useful next action.
+- Verified recipient, amount, fees and total always visible before authorization.
+- Context-aware greeting/actions for new accounts, pending setup, returning conversations and unfinished payments.
+- Nella mascot remains warm and restrained, never distracting from approval.
+- Screen-reader labels, contrast, non-color status cues, focus return and enlarged text must work.
+- Clearing chat must not remove financial records; unknown payments must survive reopening.
+
+## Priority 2 — Optimize performance and resilience
+
+- Split large chat/service modules; paginate history and lists instead of rendering unlimited messages.
+- Cancel stale work, recover controls after failures, safely retain progress across reconnect/background/foreground.
+- Compress images, bound recording/upload size, cancel uploads, release resources, store media securely.
+- Cache public catalogues, not stale financial truth; clear personal caches on logout/account switching.
+- Never replay a money instruction automatically when reconnecting.
+- Measure startup, reply/quote latency, errors, crashes and provider outcomes without logging secrets or sensitive messages.
+- Proposed test targets—not current measurements: usable first screen within three seconds on representative mid-range hardware/4G, tap feedback within 100ms, request acknowledgement within one second.
+
+## Priority 2 — Business and growth
+
+Sequence eligible business account/KYB → invoices/payment requests/collections → reminders → withdrawals and owner-approved bulk/payroll with per-line outcomes and roles. Keep full merchant POS/stock/orders, customers, delivery/coupons/events, plans and partner administration in dedicated business experiences rather than ordinary personal chat.
+
+Referrals/ambassadors require actual eligibility, attribution and rewards activation. Do not promise reward amounts. Do not advertise personal recurring transfers, card funding, automated subscription charging/broadcasts, complete storefront checkout, ticket sales, savings, crypto or cross-border payments as delivered; the source does not establish these as completed services.
 
 ## Mobile delivery decision
 
