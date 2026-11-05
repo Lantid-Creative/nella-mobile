@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 import { ArrowLeft, ArrowRight, ArrowDownToLine, Bell, Check, CircleHelp, FileText, Landmark, LockKeyhole, ReceiptText, ShieldCheck, Smartphone, Wallet, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { PreviewActivity, PreviewActions, downloadPreview } from "@/components/preview-activity";
+import { PreviewActivity } from "@/components/preview-activity";
 import { NellaMascot } from "@/components/nella-mascot";
 import { naira, type DemoUser } from "@/lib/demo-store";
 import { SERVICE_LABELS, type AppPanel, type MoneyService, type PaymentDraft, type ReceiptPreview } from "@/lib/app-provisions";
@@ -60,7 +60,7 @@ function PanelBody({ panel, onChange, user, previews, onReuse, support, setSuppo
 }
 
 export function PaymentPreviewCard({ receipt }: { receipt: ReceiptPreview }) {
-  return <div className="rounded-lg border border-border bg-card p-4"><p className="text-xs font-bold text-muted-foreground">PAYMENT PREVIEW · NOT SUBMITTED</p><h3 className="mt-2 text-sm font-semibold">{receipt.title}</h3><p className="mt-1 break-all text-2xl font-extrabold">{naira(receipt.amount)}</p><dl className="mt-3 space-y-2 text-xs">{receipt.rows.filter(([key]) => ["Recipient account", "Phone number", "Meter number", "Smartcard number", "Bank", "Provider", "Narration", "Plan / package"].includes(key)).map(([key, value]) => <div key={key} className="flex justify-between gap-3"><dt className="text-muted-foreground">{key}</dt><dd className="break-all text-right font-semibold">{value}</dd></div>)}</dl><Button variant="outline" className="mt-4 h-11 w-full" onClick={() => downloadPreview(receipt)}><ArrowDownToLine />Download preview</Button><p className="mt-2 text-xs text-muted-foreground">Not a receipt or proof of payment.</p></div>;
+  return <div className="rounded-lg border border-border bg-card p-4"><p className="text-xs font-bold text-muted-foreground">PAYMENT BREAKDOWN</p><h3 className="mt-2 text-sm font-semibold">{receipt.title}</h3><p className="mt-1 break-all text-2xl font-extrabold">{naira(receipt.amount)}</p><dl className="mt-3 space-y-2 text-xs">{receipt.rows.filter(([key]) => ["Recipient account", "Phone number", "Meter number", "Smartcard number", "Bank", "Provider", "Narration", "Plan / package"].includes(key)).map(([key, value]) => <div key={key} className="flex justify-between gap-3"><dt className="text-muted-foreground">{key}</dt><dd className="break-all text-right font-semibold">{value}</dd></div>)}</dl><p className="mt-3 text-xs text-muted-foreground">Not submitted · No money has moved.</p></div>;
 }
 function Action({ label, onClick }: { label: string; onClick: () => void }) { return <Button variant="ghost" className="h-12 w-full justify-between px-0" onClick={onClick}>{label}<ArrowRight /></Button>; }
 function Info({ title, text }: { title: string; text: string }) { return <div className="border-l-2 border-primary bg-secondary/50 px-3 py-3"><p className="flex items-center gap-2 text-xs font-bold"><ShieldCheck className="h-4 w-4 shrink-0 text-primary" />{title}</p><p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{text}</p></div>; }

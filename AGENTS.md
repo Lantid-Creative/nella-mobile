@@ -16,6 +16,6 @@
 - Do not collect identity documents or banking PINs in the browser demo; enable secure account verification and provider-backed authorization before accepting sensitive live-account inputs.
 - Keep conversational payment drafts scoped to the active demo account in memory, never persist private approval inputs; use shared sheet history for non-payment views and cancellable reply work to preserve mobile navigation and focus.
 - Validate browser-preview storage on read and surface failed writes; browser state is never live-account authorization.
-- Keep preview search, sharing and draft reuse in the shared preview workspace; reuse only editable details, never approval or provider execution identifiers.
+- Keep prepared-payment search and draft reuse in the shared workspace; reuse only editable details, never approval or provider execution identifiers. Unsubmitted breakdowns have no download or share actions.
 - Extract natural payment details through the shared request parser before prompting, using the active account phone for self-purchases; never infer a network or confuse recipient/plan numbers with money.
 - Keep approval PIN input in an ephemeral private dialog bound to the current chat draft; local demo PIN checks never authorize payments or create transaction receipts.
