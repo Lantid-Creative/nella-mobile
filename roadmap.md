@@ -18,3 +18,10 @@
 - [x] Document full source coverage and integration gaps; verify mobile demo flows and 13 tests.
 - [ ] Connect verified account, payment, notification, receipt, support and merchant services — blocked by this app's absent approved service connection and credentials; never treat the source snapshot as live access.
 - [ ] Verify real iOS/Android keyboard behavior, push and release packaging — blocked by unavailable native device/release setup and the undecided distribution path.
+## Mobile UX plan (Nov 5)
+- [x] Chat: date dividers, message grouping, gentle message animation, swipe tip, Copy in hold menu
+- [x] Time-of-day greeting; payment step tracker with Cancel; searchable long lists
+- [x] PIN auto-check with shake; sign-out confirmation; offline banner; faster splash for returning customers
+- [ ] Login polish (phone formatting, PIN auto-advance), setup progress bar + resume
+- [ ] "Repeat last payment" suggestions, edit chips on breakdown card
+- [ ] Camera guide frame, hold-to-record voice with slide-to-cancel
