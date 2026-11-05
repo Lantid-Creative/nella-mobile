@@ -25,7 +25,7 @@ function SplashScreen() {
       setLeaving(true);
       setTimeout(() => navigate({ to: canEnterChat(currentUser()) ? "/chat" : "/auth", replace: true }), 260);
     };
-    const t = setTimeout(go, 1900);
+    const t = setTimeout(go, canEnterChat(currentUser()) ? 1200 : 1900);
     return () => clearTimeout(t);
   }, [navigate]);
 
