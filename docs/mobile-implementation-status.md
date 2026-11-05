@@ -1,6 +1,8 @@
 # Approved mobile plan: implementation status
 
 ## Completed in this app
+- Guided recipient → payment details → review preparation for all five services, with editable recipients/amounts and no payment submission.
+- Searchable, service-filtered preview activity with detail view, download, device sharing or clipboard fallback, and editable-detail reuse. These remain distinct from verified transactions.
 - Cancellable delayed replies with synchronous overlap prevention; clear/logout/unmount cannot append a late reply.
 - No forced composer focus after a reply or before a service sheet; touch Enter allows multiline input and composition does not send.
 - History-aware scrolling/new-message indicator and incremental rendering of older messages.
@@ -12,6 +14,7 @@
 - Larger updated touch targets, composer focus indicator, wrapping for long account/review values and reduced motion for status indicators.
 
 ## Verification
+- Latest frontend increment: all 24 tests passed; signup → guided transfer preparation → keep → search → detail → download/share fallback → reuse verified through the UI, with no runtime errors. Screens checked at 320×568, 393×844, 852×393 and 1280×1800; close controls stayed within the viewport after resizing.
 - All 21 unit/regression tests passed; latest harness result was build OK.
 - Browser UI: signup to chat, payment review, preview download/reload, activity, notifications, onboarding requirements and unsent help draft.
 - Additional UI checks: draft retention across services and close, browser Back closes the sheet without leaving chat, refund/PIN intents, clear during reply, touch multiline input and focus remaining in a sheet during a reply.
