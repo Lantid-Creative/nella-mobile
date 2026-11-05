@@ -118,9 +118,11 @@ function AuthPage() {
             {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
             {success && <p role="status" className="flex items-start gap-2 text-sm text-primary"><Check className="h-5 w-5 shrink-0" />{success}</p>}
             <Button type="submit" className="h-13 w-full rounded-xl font-bold shadow-glow">{mode === "in" ? "Log in" : mode === "reset" ? "Reset demo PIN" : step === 0 ? "Let's get started" : step === 1 ? "Continue" : "Meet Nella"}<ArrowRight /></Button>
+            {mode === "in" && bioPhone && <Button type="button" variant="outline" className="h-13 w-full rounded-xl font-bold" disabled={bioBusy} onClick={() => void unlock()}><Fingerprint className="text-primary" />{bioBusy ? "Waiting for your device…" : "Unlock with fingerprint"}</Button>}
           </form>
           {mode === "in" && <p className="mt-6 text-center text-sm text-muted-foreground">New to Nella? <Button variant="link" className="h-11 px-1 font-bold" onClick={() => switchMode("up")}>Get started</Button></p>}
           {mode === "up" && step === 2 && <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Use a unique test PIN, not your banking PIN. This demo stores it in this browser only.</p>}
+          </>}
         </div>
         <footer className="border-t border-border pt-4 text-center"><p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><LockKeyhole className="h-3.5 w-3.5" /> Preview only · No real money moves</p><p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">Accounts stay in this browser. Live banking isn't connected.</p></footer>
       </div>
