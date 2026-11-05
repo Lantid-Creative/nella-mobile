@@ -35,19 +35,19 @@ function AuthPage() {
   const switchMode = (next: typeof mode) => { setMode(next); setStep(0); setPin(""); setPin2(""); setError(""); setSuccess(""); };
   const unlock = async () => {
     setBioBusy(true); setError("");
-    const phone = await unlockWithBiometrics();
+    const unlocked = await unlockWithBiometrics();
     setBioBusy(false);
-    if (!phone) { setError("Fingerprint unlock didn't work this time. Use your PIN instead."); return; }
-    signIn(phone, readPinForBio(phone));
-    navigate({ to: "/chat" });
+    if (!unlocked) { setError("Fingerprint unlock didn't work this time. Use your PIN instead."); return; }
+    try { signInVerified(unlocked); navigate({ to: "/chat" }); }
+    catch (err) { setError(err instanceof Error ? err.message : "Couldn't open your account. Use your PIN instead."); }
   };
   const setupBiometrics = async () => {
     setBioBusy(true); setError("");
     try {
-      const phone = normalisePhone(phoneState);
-      if (!phone) throw new Error("Enter a valid Nigerian phone number.");
-      await enableBiometrics(phone, name);
-      setBioPhone(phone);
+      const phoneNumber = normalisePhone(phone);
+      if (!phoneNumber) throw new Error("Enter a valid Nigerian phone number.");
+      await enableBiometrics(phoneNumber, name);
+      setBioPhone(phoneNumber);
       navigate({ to: "/chat" });
     } catch (err) { setError(err instanceof Error ? err.message : "Fingerprint setup failed. Your PIN still works."); }
     finally { setBioBusy(false); }
