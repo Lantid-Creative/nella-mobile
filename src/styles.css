@@ -133,5 +133,12 @@ html[data-chat-keyboard] .chat-welcome-mascot { width: 5rem; height: 5rem; }
 @media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter, .splash-orb, .splash-dot, .splash-leave, .animate-bounce, .animate-pulse { animation: none; } }
 .nella-sheet > button:last-child { display: none; }
 .nella-profile > button:last-child { position: sticky; bottom: 0; margin-left: auto; background: var(--card); }
-.nella-sheet { bottom: max(0px, calc(100dvh - var(--app-height,100dvh))); }
-@media (min-width: 640px) { .nella-sheet { top: calc(var(--app-height,100dvh) / 2); bottom: auto; } }
+.nella-sheet, .nella-profile, .nella-approval {
+  bottom: max(0px, calc(100% - var(--app-top, 0px) - var(--app-height, 100dvh)));
+  max-height: calc(var(--app-height, 100dvh) - 1rem);
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+html[data-chat-keyboard] .nella-profile, html[data-chat-keyboard] .nella-approval { padding-bottom: 1rem; }
+@media (min-width: 640px) {
+  .nella-sheet, .nella-profile, .nella-approval { top: calc(var(--app-top, 0px) + var(--app-height, 100dvh) / 2); bottom: auto; }
+}
