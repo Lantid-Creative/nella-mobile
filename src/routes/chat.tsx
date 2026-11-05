@@ -854,6 +854,16 @@ function ChatPage() {
             {notice}
           </p>
         )}
+        {cameraOpen && (
+          <NellaCamera
+            onCapture={(file, url) => acceptPhoto(file, url)}
+            onClose={() => setCameraOpen(false)}
+            onFallback={() => {
+              setCameraOpen(false);
+              cameraInputRef.current?.click();
+            }}
+          />
+        )}
         <input
           ref={cameraInputRef}
           type="file"
