@@ -116,6 +116,7 @@ function ChatPage() {
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const [choiceQuery, setChoiceQuery] = useState("");
+  const [photoCaption, setPhotoCaption] = useState("");
   const [offline, setOffline] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [swipeTip, setSwipeTip] = useState(false);
@@ -407,7 +408,8 @@ function ChatPage() {
       label: pendingPhoto.file.name,
       previewUrl: pendingPhoto.url,
     };
-    send("Payment photo", media);
+    send(photoCaption.trim() || "Payment photo", media);
+    setPhotoCaption("");
     setPendingPhoto(null);
   };
 
@@ -811,45 +813,17 @@ function ChatPage() {
         className="chat-composer mx-auto w-full max-w-2xl shrink-0 border-t border-border bg-card px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5"
       >
         {pendingPhoto && (
-          <div className="glass mb-2 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-border p-3 sm:flex">
-            <img
-              src={pendingPhoto.url}
-              alt="Selected photo"
-              className="h-14 w-14 shrink-0 rounded-xl object-cover"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Review this photo</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Review your photo before attaching it.
-              </p>
+          <div role="dialog" aria-modal="true" aria-label="Send photo" className="fixed inset-0 z-50 flex flex-col bg-foreground text-background">
+            <div className="flex items-center justify-between px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+              <Button variant="plain" size="none" type="button" onClick={() => { clearPhoto(); setPhotoCaption(""); }} aria-label="Discard photo" className="h-11 w-11 rounded-full hover:bg-background/10"><X className="h-6 w-6" /></Button>
+              <Button variant="plain" size="none" type="button" onClick={() => { clearPhoto(); cameraInputRef.current?.click(); }} className="h-11 rounded-full px-4 text-sm font-semibold hover:bg-background/10"><Camera className="h-5 w-5" />Retake</Button>
             </div>
-            <div className="col-span-2 flex justify-end gap-2 sm:contents">
-            <Button variant="plain" size="none"
-              type="button"
-              onClick={() => {
-                clearPhoto();
-                setCameraOpen(true);
-              }}
-              className="min-h-11 rounded-lg px-2 py-2 text-xs font-semibold hover:bg-accent"
-            >
-              Retake
-            </Button>
-            <Button variant="plain" size="none"
-              type="button"
-              onClick={clearPhoto}
-              aria-label="Remove photo"
-              className="min-h-11 min-w-11 rounded-full p-2 text-muted-foreground hover:bg-accent"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <Button variant="plain" size="none"
-              type="button"
-              onClick={sendPhoto}
-              disabled={typing}
-              className="min-h-11 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
-            >
-              Attach
-            </Button>
+            <div className="flex min-h-0 flex-1 items-center justify-center p-2">
+              <img src={pendingPhoto.url} alt="Photo to send" className="max-h-full max-w-full object-contain" />
+            </div>
+            <div className="flex items-end gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+              <input value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value.slice(0, 200))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendPhoto(); } }} placeholder="Add a caption…" aria-label="Add a caption" className="h-12 min-w-0 flex-1 rounded-full bg-background/15 px-4 text-base text-background placeholder:text-background/60 outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <Button type="button" size="none" onClick={sendPhoto} disabled={typing} aria-label="Send photo" className="h-12 w-12 shrink-0 rounded-full"><ArrowUp className="h-5 w-5" /></Button>
             </div>
           </div>
         )}
@@ -973,7 +947,7 @@ function ChatPage() {
                 type="button"
                 onClick={() => {
                   setPhotoMenu(false);
-                  setCameraOpen(true);
+                  cameraInputRef.current?.click();
                 }}
                 className="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium hover:bg-accent"
               >
