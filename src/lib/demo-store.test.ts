@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   currentUser,
+  canEnterChat,
+  completeOnboarding,
   demoReply,
   loadChat,
   resetDemoPin,
@@ -19,6 +21,28 @@ describe("demo preview account and chat", () => {
     expect(currentUser()).toBeNull(); expect(loadChat("8012345678")).toEqual([]);
     localStorage.setItem("nella.chat.v2.8012345678", JSON.stringify([null, { id: "bad", role: "nella", at: 1, card: { kind: "preview", preview: null } }]));
     expect(loadChat("8012345678")).toEqual([]);
+  });
+  it("requires new customers to complete onboarding before entering chat", () => {
+    signUp("Ada Okafor", "08012345678", "1234");
+    expect(canEnterChat(currentUser())).toBe(false);
+    signIn("08012345678", "1234");
+    expect(canEnterChat(currentUser())).toBe(false);
+    completeOnboarding();
+    expect(canEnterChat(currentUser())).toBe(true);
+    signIn("08012345678", "1234");
+    expect(canEnterChat(currentUser())).toBe(true);
+  });
+  it("requires older accounts without a completion record to finish setup", () => {
+    localStorage.setItem("nella.users.v2", JSON.stringify([{ name: "Ada Okafor", phone: "8012345678", pin: "1234" }]));
+    signIn("08012345678", "1234");
+    expect(canEnterChat(currentUser())).toBe(false);
+  });
+  it("does not mark onboarding complete when the browser cannot save it", () => {
+    signUp("Ada Okafor", "08012345678", "1234");
+    const store = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    expect(() => completeOnboarding()).toThrow();
+    store.mockRestore();
+    expect(canEnterChat(currentUser())).toBe(false);
   });
   it("reports an unsuccessful chat save instead of throwing on a full browser store", () => {
     const store = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
