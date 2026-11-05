@@ -32,7 +32,7 @@ A genuine mobile-first Nella money companion—not a generic AI chatbot. Custome
 | Recovery/security | Private PIN forms, verified recovery, lock/cooldown visibility, device sessions, number change and account protection. |
 | Voice/photos | Permission, bounded upload, review, transcription/extraction, correction and retry; mandatory payment approval. |
 
-Cover account-opening events, incoming credits, payment outcomes, reversals/refunds, receipts/tokens, support replies, security and eligible business approvals/invoice reminders. Separate essential alerts from optional reminders/promotions; preserve source opt-outs/quiet hours. WhatsApp’s messaging-window rule is not an app push rule.
+Alerts must cover account opening, credits, payment/refund/token outcomes, support/security and eligible business events. Separate essential from optional alerts; preserve applicable opt-outs/quiet hours.
 
 ## Priority 1 — Concrete fixes found in the current app
 
@@ -84,14 +84,14 @@ If installation is chosen, begin with icons/home-screen metadata. Offline cachin
 
 Use one authoritative Nella ledger/account service, authenticated channel adapters and durable conversation/notification/support state. Provision Lovable Cloud for new app-owned persistence if needed. Keep financial operations in protected server functions with verified callbacks, least privilege, idempotency and reconciliation. Chat/activity/receipts/push must read the same event state. Test every financial rule, ownership, quote expiry, recovery cooldown and duplicate submission.
 
-## Recommended execution order and acceptance gates
+## Execution order and release gates
 
-1. **Mobile UX hardening:** keyboard/back/scroll, sheet headers/actions, field preservation, accessibility and profile simplification. Existing demo behavior must keep passing.
-2. **Trusted foundation:** phone ownership, real sessions, secure onboarding and shared account identity. Verify signup, resume, login, recovery and logout end-to-end.
-3. **Money services:** funding/balance, transfers, airtime/data/bills and private approvals. Verify actual result readback, not only an accepted request.
-4. **Operational completion:** activity, confirmed receipts/statements, notifications, support and media. Verify a signed event reaches durable storage and the correct customer screen.
-5. **Business/growth and mobile packaging:** eligible services, chosen distribution path, performance and production readiness.
+1. **Mobile UX hardening:** keyboard/back/scroll, sheets, draft retention, accessibility, profile simplification; preserve existing demo tests.
+2. **Trusted foundation:** verified phone/sessions, secure resumable onboarding, shared account identity; test signup, login, recovery and logout.
+3. **Money services:** funding/balance, transfers, purchases and private approvals; verify actual provider result readback.
+4. **Operational completion:** confirmed activity/receipts/statements, notifications, support and media; verify durable events reach the right customer.
+5. **Business/growth and delivery:** eligible services, chosen packaging, performance and controlled release.
 
-**Release gate:** test iOS Safari/installed mode as applicable and Android Chrome/installed mode on real phones, including 320–430px widths, keyboard open, large text, slow/reconnecting network and foreground/background transitions. Exercise interrupted onboarding, wrong PIN, expired quote, double-tap, insufficient funds, pending/unknown/reversal, missing token, receipt failure, push denial and human support. No duplicate debit, unauthorized access, fabricated success or lost pending-payment state is acceptable.
+Test real iOS/Android phones, 320–430px widths, keyboard open, landscape, large text, slow/reconnecting network and background/foreground. Cover wrong PIN, expired quote, double-tap, insufficient funds, unknown/reversal, missing token, receipt failure, push denial and human support. No duplicate debit, unauthorized access, fabricated success or lost pending payment is acceptable.
 
-**Blocking dependencies:** approved service access/credentials, verified channel-to-account mapping, provider test setup, push delivery setup, support operations and approved legal/financial disclosures. Static repository access cannot supply these. No live-money readiness claim until these checks pass.
+**Blockers:** approved service access/credentials, verified channel/account mapping, provider test setup, push delivery, support operations and approved legal/financial disclosures. Source access cannot supply these; live readiness remains unverified.
