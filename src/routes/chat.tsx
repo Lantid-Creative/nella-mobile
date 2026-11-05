@@ -6,7 +6,6 @@ import {
   CalendarClock,
   Camera,
   CircleHelp,
-  UserRound,
   History,
   ImagePlus,
   LogOut,
@@ -33,7 +32,9 @@ import {
   type ChatMsg,
   type DemoUser,
 } from "@/lib/demo-store";
-import logo from "@/assets/nella-footer-logo.png.asset.json";
+import { Button } from "@/components/ui/button";
+import { NellaMascot } from "@/components/nella-mascot";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -45,6 +46,8 @@ export const Route = createFileRoute("/chat")({
           "Send money, buy airtime and data, pay bills and check your balance by chatting with Nella.",
       },
       { property: "og:title", content: "Chat with Nella" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content:
@@ -61,34 +64,29 @@ const uid = () => crypto.randomUUID();
 type QuickAction = {
   label: string;
   prompt: string;
-  description: string;
   icon: LucideIcon;
   attachment?: boolean;
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    label: "Check my balance",
+    label: "Balance",
     prompt: "Check my balance",
-    description: "See your available balance",
     icon: Wallet,
   },
   {
     label: "Send money",
     prompt: "Send money",
-    description: "Transfer to a bank account",
     icon: ArrowLeftRight,
   },
   {
     label: "Buy airtime",
     prompt: "Buy airtime",
-    description: "Top up any network",
     icon: Smartphone,
   },
   {
-    label: "Snap a bill",
+    label: "Pay a bill",
     prompt: "Snap a bill",
-    description: "Scan payment details",
     icon: ReceiptText,
     attachment: true,
   },
@@ -185,6 +183,7 @@ function ChatPage() {
         ...parts.map((p) => ({ ...p, id: uid(), role: "nella" as const, at: Date.now() })),
       ]);
       setTyping(false);
+      inputRef.current?.focus();
     }, delay);
   };
   const patch = (id: string, fn: (m: ChatMsg) => ChatMsg) =>
@@ -198,6 +197,7 @@ function ChatPage() {
       { id: uid(), role: "user", text: t, ...(media ? { media } : {}), at: Date.now() },
     ]);
     setText("");
+    inputRef.current?.focus();
     if (inputRef.current) inputRef.current.style.height = "auto";
     nellaSays(
       demoReply(
@@ -359,14 +359,14 @@ function ChatPage() {
   };
 
   if (!user) return <div className="min-h-screen bg-background" />;
-  const first = user.name.split(" ")[0];
+  const first = user.name.split(" ")[0] || "there";
   const empty = msgs.length === 0;
 
   return (
-    <div className="bg-hero flex h-[var(--app-height,100dvh)] min-h-0 flex-col overflow-hidden">
-      <header className="relative z-10 flex shrink-0 items-center justify-end px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5">
-        <img src={logo.url} alt="Nella" className="absolute left-1/2 h-7 w-auto -translate-x-1/2" />
-        <button
+    <div className="chat-surface mx-auto flex h-[var(--app-height,100dvh)] min-h-0 max-w-3xl flex-col overflow-hidden">
+      <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-card px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <div className="flex min-w-0 items-center gap-3"><NellaMascot small /><div className="min-w-0"><p className="text-lg font-extrabold text-primary">nella<span className="text-foreground">.</span></p><p className="text-[11px] text-muted-foreground">Your money companion</p></div></div>
+        <Button variant="plain" size="none"
           onClick={() => {
             setMenu((m) => !m);
             setConfirmClear(false);
@@ -375,22 +375,17 @@ function ChatPage() {
           aria-expanded={menu}
           className="glass flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground hover:bg-accent"
         >
-          <UserRound className="h-5 w-5" />
-        </button>
-        {menu && (
-          <div className="glass absolute right-4 top-[calc(100%-0.25rem)] z-20 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-border p-4 shadow-glow">
+          <span className="text-sm font-bold text-primary">{first.slice(0,1)}</span>
+        </Button>
+        <Dialog open={menu} onOpenChange={setMenu}>
+          <DialogContent className="bottom-0 left-0 top-auto max-h-[85dvh] overflow-y-auto translate-x-0 translate-y-0 rounded-t-3xl p-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
+            <DialogTitle>Your profile</DialogTitle>
+            <DialogDescription>Manage your Nella demo account.</DialogDescription>
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-bold">{user.name}</p>
                 <p className="text-xs text-muted-foreground">+234 {user.phone}</p>
               </div>
-              <button
-                onClick={() => setMenu(false)}
-                aria-label="Close profile menu"
-                className="rounded-full p-1 text-muted-foreground hover:bg-accent"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
             <div className="my-3 h-px bg-border" />
             <ProfileAction
@@ -440,13 +435,13 @@ function ChatPage() {
                   This removes the conversation saved in this browser.
                 </p>
                 <div className="mt-2 flex gap-2">
-                  <button
+                  <Button variant="plain" size="none"
                     onClick={() => setConfirmClear(false)}
                     className="flex-1 rounded-lg border border-border py-2 text-xs font-semibold"
                   >
                     Keep chat
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="plain" size="none"
                     onClick={() => {
                       commit([]);
                       setConfirmClear(false);
@@ -455,7 +450,7 @@ function ChatPage() {
                     className="flex-1 rounded-lg bg-destructive py-2 text-xs font-semibold text-destructive-foreground"
                   >
                     Clear chat
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -465,17 +460,17 @@ function ChatPage() {
                 onClick={() => setConfirmClear(true)}
               />
             )}
-            <button
+            <Button variant="plain" size="none"
               onClick={() => {
                 signOut();
                 navigate({ to: "/", replace: true });
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
+              className="flex min-h-11 w-full items-center justify-start gap-3 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
             >
               <LogOut className="h-4 w-4" /> Log out
-            </button>
-          </div>
-        )}
+            </Button>
+          </DialogContent>
+        </Dialog>
       </header>
 
       <main
@@ -483,35 +478,28 @@ function ChatPage() {
         onClick={() => setMenu(false)}
       >
         {empty ? (
-          <div className="flex min-h-full flex-col items-center justify-center pb-6 pt-5 text-center sm:py-8">
-            <p className="text-sm text-muted-foreground">Hi, {first}!</p>
-            <h1 className="mt-1 max-w-sm text-xl font-bold sm:text-2xl">
-              What would you like to do today?
-            </h1>
-            <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-              Chat, speak, or attach a photo to get started.
-            </p>
-            <section aria-label="Payment actions" className="mt-7 w-full max-w-md">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                {QUICK_ACTIONS.map((action) => (
-                  <QuickActionTile
-                    key={action.label}
-                    action={action}
-                    onClick={() => runQuickAction(action)}
-                    disabled={typing}
-                  />
-                ))}
+          <div className="flex min-h-full flex-col items-center justify-center pb-4 pt-5 text-center">
+            <NellaMascot className="mb-3 h-36 w-36" />
+            <span className="mb-3 rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-primary">YOUR MONEY, IN A CHAT</span>
+            <h1 className="text-2xl font-extrabold">Hi, {first} <span aria-hidden="true">👋</span></h1>
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">I'm Nella. What can I help you with today?</p>
+            <section aria-label="Payment actions" className="mt-6 w-full max-w-sm">
+              <div className="grid grid-cols-2 gap-2.5">
+                {QUICK_ACTIONS.map((action) => <QuickActionTile key={action.label} action={action} onClick={() => runQuickAction(action)} disabled={typing} />)}
               </div>
             </section>
+            <p className="mt-5 text-[11px] text-muted-foreground">Preview only · Banking services aren't connected</p>
           </div>
         ) : (
-          <div className="space-y-3 py-4">
+          <div role="log" aria-label="Conversation with Nella" aria-live="polite" className="space-y-5 py-5">
+            <p className="text-center text-[11px] text-muted-foreground">Today · Preview conversation</p>
             {msgs.map((m) => (
               <div
                 key={m.id}
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className="max-w-[85%] space-y-2">
+                {m.role === "nella" && <NellaMascot small className="mr-2 h-7 w-7" />}
+                <div className="min-w-0 max-w-[85%] space-y-2">
                   {m.media?.kind === "image" && (
                     <div className="glass overflow-hidden rounded-[20px] border border-border p-2">
                       {m.media.previewUrl ? (
@@ -547,7 +535,7 @@ function ChatPage() {
                   )}
                   {m.text && (
                     <div
-                      className={`whitespace-pre-wrap text-[15px] leading-relaxed ${m.role === "user" ? "rounded-[20px] rounded-br-[4px] bg-primary px-4 py-3 text-primary-foreground" : "px-1 py-1 text-foreground"}`}
+                      className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed ${m.role === "user" ? "rounded-[20px] rounded-br-[4px] bg-primary px-4 py-3 text-primary-foreground" : "px-1 py-1 text-foreground"}`}
                     >
                       {m.text}
                     </div>
@@ -567,20 +555,20 @@ function ChatPage() {
                       return (
                         <div className="flex flex-wrap gap-2">
                           {NARRATIONS.map((n) => (
-                            <button
+                            <Button variant="plain" size="none"
                               key={n}
                               onClick={() => pickNarration(m.id, c.pending, n)}
                               className="glass rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-accent"
                             >
                               {n}
-                            </button>
+                            </Button>
                           ))}
-                          <button
+                          <Button variant="plain" size="none"
                             onClick={() => pickNarration(m.id, c.pending, null)}
                             className="rounded-full px-4 py-2 text-sm text-muted-foreground hover:bg-accent"
                           >
                             Skip
-                          </button>
+                          </Button>
                         </div>
                       );
                     })()}
@@ -616,7 +604,7 @@ function ChatPage() {
                       </dl>
                       {m.card.status === "pending" ? (
                         <div className="mt-4 grid grid-cols-2 gap-2">
-                          <button
+                          <Button variant="plain" size="none"
                             onClick={() =>
                               patch(m.id, (x) => ({
                                 ...x,
@@ -626,14 +614,14 @@ function ChatPage() {
                             className="min-h-11 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-accent"
                           >
                             Cancel
-                          </button>
-                          <button
+                          </Button>
+                          <Button variant="plain" size="none"
                             type="button"
                             disabled
                             className="min-h-11 cursor-not-allowed rounded-xl bg-muted py-2.5 text-sm font-bold text-muted-foreground"
                           >
                             Unavailable
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <p className="mt-4 text-sm font-medium text-foreground">
@@ -654,11 +642,13 @@ function ChatPage() {
                       </p>
                     </div>
                   )}
+                  <p className={`text-[10px] text-muted-foreground ${m.role === "user" ? "text-right" : ""}`}>{new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
               </div>
             ))}
             {typing && (
-              <div className="flex items-center">
+              <div role="status" aria-label="Nella is replying" className="flex items-center gap-2">
+                <NellaMascot small className="h-7 w-7" />
                 <div className="glass flex gap-1 rounded-full px-4 py-3">
                   {[0, 1, 2].map((i) => (
                     <span
@@ -680,7 +670,7 @@ function ChatPage() {
           e.preventDefault();
           send(text);
         }}
-        className="mx-auto w-full max-w-2xl shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-5"
+        className="mx-auto w-full max-w-2xl shrink-0 border-t border-border bg-card px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5"
       >
         {pendingPhoto && (
           <div className="glass mb-2 flex items-center gap-3 rounded-2xl border border-border p-3">
@@ -695,7 +685,7 @@ function ChatPage() {
                 Review your photo before attaching it.
               </p>
             </div>
-            <button
+            <Button variant="plain" size="none"
               type="button"
               onClick={() => {
                 clearPhoto();
@@ -704,23 +694,23 @@ function ChatPage() {
               className="rounded-lg px-2 py-2 text-xs font-semibold hover:bg-accent"
             >
               Retake
-            </button>
-            <button
+            </Button>
+            <Button variant="plain" size="none"
               type="button"
               onClick={clearPhoto}
               aria-label="Remove photo"
               className="rounded-full p-2 text-muted-foreground hover:bg-accent"
             >
               <X className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button variant="plain" size="none"
               type="button"
               onClick={sendPhoto}
               disabled={typing}
               className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
             >
               Attach
-            </button>
+            </Button>
           </div>
         )}
         {voiceMode === "recording" && (
@@ -729,13 +719,13 @@ function ChatPage() {
               <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-destructive" /> Recording ·{" "}
               {recordingSeconds}s
             </p>
-            <button
+            <Button variant="plain" size="none"
               type="button"
               onClick={stopVoiceRecording}
               className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
             >
               Stop & review
-            </button>
+            </Button>
           </div>
         )}
         {voiceMode === "review" && (
@@ -748,14 +738,14 @@ function ChatPage() {
               aria-label="Review voice note before sending"
             />
             <div className="flex justify-end gap-2">
-              <button
+              <Button variant="plain" size="none"
                 type="button"
                 onClick={discardVoiceRecording}
                 className="rounded-xl border border-border px-3 py-2 text-sm font-semibold"
               >
                 Discard
-              </button>
-              <button
+              </Button>
+              <Button variant="plain" size="none"
                 type="button"
                 onClick={() => {
                   discardVoiceRecording();
@@ -764,15 +754,15 @@ function ChatPage() {
                 className="rounded-xl border border-border px-3 py-2 text-sm font-semibold"
               >
                 Record again
-              </button>
-              <button
+              </Button>
+              <Button variant="plain" size="none"
                 type="button"
                 onClick={sendVoice}
                 disabled={typing}
                 className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-40"
               >
                 Send voice note
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -810,7 +800,7 @@ function ChatPage() {
               id="photo-options"
             >
               <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Add a photo</p>
-              <button
+              <Button variant="plain" size="none"
                 type="button"
                 onClick={() => {
                   setPhotoMenu(false);
@@ -819,8 +809,8 @@ function ChatPage() {
                 className="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium hover:bg-accent"
               >
                 <Camera className="h-4 w-4" /> Take a photo
-              </button>
-              <button
+              </Button>
+              <Button variant="plain" size="none"
                 type="button"
                 onClick={() => {
                   setPhotoMenu(false);
@@ -829,20 +819,20 @@ function ChatPage() {
                 className="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium hover:bg-accent"
               >
                 <ImagePlus className="h-4 w-4" /> Choose from photos
-              </button>
+              </Button>
             </div>
           )}
-          <button
+          <Button variant="plain" size="none"
             type="button"
             onClick={() => setPhotoMenu((open) => !open)}
             aria-label="Add attachment"
             aria-expanded={photoMenu}
             aria-controls="photo-options"
             title="Add attachment"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"
           >
             <Plus className="h-5 w-5" />
-          </button>
+          </Button>
           <textarea
             ref={inputRef}
             disabled={voiceMode === "recording"}
@@ -861,19 +851,19 @@ function ChatPage() {
             }}
             placeholder="Message Nella…"
             aria-label="Message Nella"
-            className="max-h-32 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] text-foreground placeholder:text-muted-foreground outline-none"
+            className="max-h-32 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-base text-foreground placeholder:text-muted-foreground outline-none"
           />
           {text.trim() ? (
-            <button
+            <Button variant="plain" size="none"
               type="submit"
               disabled={typing}
               aria-label="Send message"
-              className="shadow-glow flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 sm:h-10 sm:w-10"
+              className="shadow-glow flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 sm:h-10 sm:w-10"
             >
               <ArrowUp className="h-5 w-5" />
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button variant="plain" size="none"
               type="button"
               onClick={() =>
                 voiceMode === "recording" ? stopVoiceRecording() : void startVoiceRecording()
@@ -883,14 +873,14 @@ function ChatPage() {
               }
               title="Record a voice note"
               disabled={voiceMode === "review"}
-              className={`shadow-glow flex h-10 w-10 shrink-0 items-center justify-center rounded-full disabled:opacity-40 ${
+              className={`shadow-glow flex h-11 w-11 shrink-0 items-center justify-center rounded-full disabled:opacity-40 ${
                 voiceMode === "recording"
                   ? "bg-destructive text-destructive-foreground"
                   : "bg-primary text-primary-foreground"
               }`}
             >
               <Mic className="h-5 w-5" />
-            </button>
+            </Button>
           )}
         </div>
       </form>
@@ -919,22 +909,17 @@ function QuickActionTile({
   const Icon = action.icon;
 
   return (
-    <button
+    <Button variant="plain" size="none"
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="glass flex min-h-32 w-full flex-col items-start gap-3 rounded-2xl border border-border p-4 text-left text-foreground transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-36 sm:p-5"
+      className="flex min-h-20 w-full items-center justify-start gap-3 whitespace-normal rounded-xl border border-border bg-card px-3 py-3 text-left text-foreground hover:border-primary/40 hover:bg-accent disabled:opacity-50"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-glow">
         <Icon className="h-5 w-5" />
       </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-semibold">{action.label}</span>
-        <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-          {action.description}
-        </span>
-      </span>
-    </button>
+      <span className="min-w-0 text-sm font-semibold">{action.label}</span>
+    </Button>
   );
 }
 
@@ -948,11 +933,11 @@ function ProfileAction({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button variant="plain" size="none"
       onClick={onClick}
-      className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-foreground hover:bg-accent"
+      className="flex min-h-11 w-full items-center justify-start gap-3 rounded-lg px-2 py-2 text-left text-sm text-foreground hover:bg-accent"
     >
       <Icon className="h-4 w-4 text-muted-foreground" /> {label}
-    </button>
+    </Button>
   );
 }

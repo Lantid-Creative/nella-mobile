@@ -66,32 +66,32 @@
 
 :root {
   --radius: 1rem;
-  --background: oklch(0.14 0.04 265);
-  --foreground: oklch(0.97 0.01 250);
-  --card: oklch(0.2 0.05 265);
-  --card-foreground: oklch(0.97 0.01 250);
-  --popover: oklch(0.2 0.05 265);
-  --popover-foreground: oklch(0.97 0.01 250);
+  --background: oklch(0.985 0.003 250);
+  --foreground: oklch(0.24 0.025 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.025 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.025 260);
   --primary: oklch(0.56 0.22 262);
   --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.64 0.2 254);
+  --primary-glow: oklch(0.49 0.2 254);
   --primary-deep: oklch(0.36 0.2 266);
-  --secondary: oklch(0.25 0.06 264);
-  --secondary-foreground: oklch(0.97 0.01 250);
-  --muted: oklch(0.22 0.05 265);
-  --muted-foreground: oklch(0.72 0.04 258);
-  --accent: oklch(0.28 0.08 264);
-  --accent-foreground: oklch(0.97 0.01 250);
+  --secondary: oklch(0.95 0.014 254);
+  --secondary-foreground: oklch(0.24 0.025 260);
+  --muted: oklch(0.955 0.005 250);
+  --muted-foreground: oklch(0.5 0.025 258);
+  --accent: oklch(0.94 0.025 254);
+  --accent-foreground: oklch(0.24 0.025 260);
   --destructive: oklch(0.64 0.2 22);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
+  --border: oklch(0.9 0.01 250);
+  --input: oklch(0.86 0.014 250);
   --ring: oklch(0.64 0.2 254);
   --chart-1: oklch(0.56 0.22 262); --chart-2: oklch(0.64 0.2 254); --chart-3: oklch(0.36 0.2 266); --chart-4: oklch(0.7 0.15 150); --chart-5: oklch(0.75 0.15 80);
   --sidebar: oklch(0.2 0.05 265); --sidebar-foreground: oklch(0.97 0.01 250); --sidebar-primary: oklch(0.56 0.22 262); --sidebar-primary-foreground: oklch(0.99 0 0); --sidebar-accent: oklch(0.28 0.08 264); --sidebar-accent-foreground: oklch(0.97 0.01 250); --sidebar-border: oklch(1 0 0 / 10%); --sidebar-ring: oklch(0.64 0.2 254);
-  --gradient-hero: radial-gradient(120% 70% at 50% -10%, var(--primary-glow) 0%, var(--primary) 30%, var(--primary-deep) 55%, var(--background) 85%);
+  --gradient-hero: linear-gradient(180deg, var(--secondary), var(--background) 48%);
   --gradient-orb: radial-gradient(circle at 35% 30%, oklch(0.98 0.02 240) 0%, var(--primary-glow) 25%, var(--primary-deep) 70%, oklch(0.12 0.04 265) 100%);
-  --shadow-glow: 0 10px 40px -8px color-mix(in oklab, var(--primary) 70%, transparent);
+  --shadow-glow: 0 8px 24px -10px color-mix(in oklab, var(--primary) 25%, transparent);
   --shadow-lip: 0 3px 0 0 var(--primary-deep);
 }
 
@@ -110,3 +110,11 @@
 @utility bg-orb { background: var(--gradient-orb); }
 @utility shadow-glow { box-shadow: var(--shadow-glow); }
 @utility glass { background: color-mix(in oklab, var(--card) 70%, transparent); backdrop-filter: blur(16px); }
+
+.nella-mascot { animation: nella-hello 3.8s ease-in-out infinite; transform-origin: bottom center; }
+@keyframes nella-hello { 0%, 100% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-5px) rotate(-3deg); } 65% { transform: translateY(-3px) rotate(2deg); } }
+.chat-surface { background: var(--background); }
+.auth-surface { background: var(--background); }
+.step-enter { animation: step-enter 240ms ease-out; }
+@keyframes step-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter { animation: none; } }

@@ -8,3 +8,7 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep existing demo-account and banking behavior during presentation refinements; UI completion must not imply verified live banking.
+- Compose welcome and chat identity from the shared Nella mascot component, and use design-system buttons for all updated controls.
+- Keep new-customer setup inside the public entry page with progressive steps, then navigate directly to chat; this preserves the minimal navigation model.
