@@ -584,7 +584,7 @@ function ChatPage() {
             </section>
             <Button variant="ghost" className="mt-2 h-11" onClick={() => void startVoiceRecording()}><Mic />Voice note</Button>
             <Button variant="link" className="mt-2 h-11" onClick={() => setPanel("services")}>All money services<ArrowUp className="rotate-45" /></Button>
-            <Button variant="ghost" className="h-11 text-xs text-muted-foreground" onClick={() => setPanel("onboarding")}><Shield />Complete your account setup</Button>
+            {user && !canEnterChat(user) && <Button variant="ghost" className="h-11 text-xs text-muted-foreground" onClick={() => setPanel("onboarding")}><Shield />Complete your account setup</Button>}
             <p className="mt-3 text-[11px] text-muted-foreground">Preview only · Banking services aren't connected</p>
           </div>
         ) : (

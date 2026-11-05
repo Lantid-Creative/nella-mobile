@@ -112,6 +112,24 @@ export function resetDemoPin(phoneRaw: string, pin: string) {
 
 export const signOut = () => removeDemoValue(SESSION);
 
+export const DEMO_PHONE = "8012345678";
+export const DEMO_PIN = "1234";
+
+/** Seeds (or reuses) a ready demo account with onboarding and KYC complete, then signs in. Demo only. */
+export function seedDemoLogin() {
+  const users = readUsers();
+  let user = users.find((candidate) => candidate.phone === DEMO_PHONE);
+  if (!user) {
+    user = { name: "Demo Customer", phone: DEMO_PHONE, pin: DEMO_PIN, onboardingComplete: true, kycSetupComplete: true };
+    users.push(user);
+  } else {
+    user.onboardingComplete = true;
+    user.kycSetupComplete = true;
+  }
+  persistUsers(users);
+  setSession(DEMO_PHONE);
+}
+
 export function currentUser(): DemoUser | null {
   let p: string | null;
   try { p = localStorage.getItem(SESSION); } catch { return null; }
