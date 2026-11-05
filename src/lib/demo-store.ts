@@ -88,6 +88,14 @@ export function signIn(phoneRaw: string, pin: string) {
   setSession(u.phone);
 }
 
+/** Signs in after the device has verified the owner with fingerprint/face (demo only). */
+export function signInVerified(phoneRaw: string) {
+  const phone = normalisePhone(phoneRaw);
+  const u = phone ? readUsers().find((x) => x.phone === phone) : undefined;
+  if (!u) throw new Error("No demo account was found for this number in this browser.");
+  setSession(u.phone);
+}
+
 export function resetDemoPin(phoneRaw: string, pin: string) {
   const phone = normalisePhone(phoneRaw);
   if (!phone) throw new Error("Enter the phone number used for this demo account.");
