@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { canEnterChat, currentUser } from "@/lib/demo-store";
 import { NellaMascot } from "@/components/nella-mascot";
 import { LockKeyhole } from "lucide-react";
+import nellaFooterLogo from "@/assets/nella-footer-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [

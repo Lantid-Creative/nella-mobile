@@ -6,6 +6,7 @@ import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiomet
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
 import { KycSetup } from "@/components/kyc-setup";
+import nellaLogo from "@/assets/nella-nav-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [
