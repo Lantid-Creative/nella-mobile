@@ -28,7 +28,7 @@ function choices(state: PaymentConversation): string[] {
   if (state.field === "provider") return providers[state.draft.service];
   if (state.field === "plan" && state.draft.service === "electricity") return ["Prepaid", "Postpaid"];
   if (state.field === "narration") return ["Rent", "Family", "Skip"];
-  if (state.field === "review") return ["Edit details", "Cancel"];
+  if (state.field === "review") return ["Approve payment", "Edit details", "Cancel"];
   return [];
 }
 function next(draft: PaymentDraft, sender: string, narrationDone = false): Turn {

@@ -37,8 +37,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
 import { NellaCamera } from "@/components/nella-camera";
+import { PaymentApproval } from "@/components/payment-approval";
 import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
-import { panelForMessage, type AppPanel, type ReceiptPreview } from "@/lib/app-provisions";
+import { panelForMessage, paymentPreview, type AppPanel, type ReceiptPreview } from "@/lib/app-provisions";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { usePendingReply, isNearConversationBottom, shouldSendOnEnter } from "@/hooks/use-chat-behavior";
 import { useServiceNavigation } from "@/hooks/use-service-navigation";
@@ -112,6 +113,7 @@ function ChatPage() {
   const [menu, setMenu] = useState(false);
   const { panel, change: changePanel, back: panelBack, depth: panelDepth } = useServiceNavigation();
   const [payment, setPayment] = useState<PaymentConversation | null>(null);
+  const [approval, setApproval] = useState<PaymentConversation | null>(null);
   const [chatChoices, setChatChoices] = useState<string[]>([]);
   const setPanel = (next: AppPanel | null) => {
     if (next && (next in SERVICE_LABELS || next === "services")) {
@@ -224,6 +226,17 @@ function ChatPage() {
   const send = (raw: string, media?: ChatMedia) => {
     const t = raw.trim();
     if (!t || reply.busy.current || !user) return;
+    if (payment?.field === "review" && /^(?:approve(?: payment)?|confirm(?: payment)?|pay now)$/i.test(t)) {
+      setText("");
+      inputRef.current?.blur();
+      setApproval(payment);
+      return;
+    }
+    if (payment?.field === "review" && /^\d{4}$/.test(t)) {
+      setText("");
+      setNotice("Keep your PIN out of chat. Use Approve payment and enter only your demo PIN there.");
+      return;
+    }
     followsBottom.current = true;
     commit([
       ...msgsRef.current,
@@ -433,6 +446,12 @@ function ChatPage() {
 
   return (
     <div className="chat-surface mx-auto flex h-[var(--app-height,100dvh)] min-h-0 max-w-3xl flex-col overflow-hidden">
+      {approval && approval === payment && <PaymentApproval receipt={paymentPreview(approval.draft, user.name)} user={user} onClose={() => setApproval(null)} onComplete={() => {
+        setApproval(null);
+        setPayment(null);
+        setChatChoices([]);
+        nellaSays([{ text: "Demo PIN checked. No payment was submitted and no money moved. Live payment approval is not connected yet." }], 300);
+      }} />}
       <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex min-w-0 items-center gap-3"><NellaMascot small /><div className="min-w-0"><p className="text-lg font-extrabold text-primary">nella<span className="text-foreground">.</span></p><p className="text-[11px] text-muted-foreground">Your money companion</p></div></div>
         <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground" aria-label="Notifications" title="Notifications" onClick={() => setPanel("notifications")}><Bell /></Button>
