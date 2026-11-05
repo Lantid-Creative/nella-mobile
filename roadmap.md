@@ -1,4 +1,5 @@
 # Nella WhatsApp-to-app coverage
+- [x] Replace payment-entry sheets with progressive chat conversations, in-chat edits/cancellation, photo/voice fallback and preview reuse; tests and mobile browser flow verified. Transcription, photo extraction and live payments remain unconnected.
 - [x] Continue frontend-only mobile building: guided payment steps, searchable preview activity, preview details/share/reuse, and mobile regression checks; all 24 tests passed, live connections deferred.
 - [x] Implement mobile reply cancellation, history-aware scrolling/pagination, sheet navigation/draft retention, storage validation, intent corrections and accessibility improvements.
 - [x] Verify demo customer journey, close/back/draft/focus regressions at mobile/landscape/desktop sizes; all 21 tests passed.
