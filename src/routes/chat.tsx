@@ -275,6 +275,7 @@ function ChatPage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    setPhotoMenu(false);
     if (!file.type.startsWith("image/")) {
       setNotice("Choose an image file.");
       return;

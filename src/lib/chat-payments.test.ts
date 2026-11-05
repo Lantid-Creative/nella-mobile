@@ -32,4 +32,15 @@ describe("Chat-only payments", () => {
     if (!state) throw new Error("Expected state");
     expect(answerPayment(state, "Prepaid", "Ada").preview?.rows).toContainEqual(["Plan / package", "Prepaid"]);
   });
+  it("collects data and cable plans through chat", () => {
+    for (const [service, provider, number, plan] of [["data", "MTN", "08012345678", "2GB"], ["cable", "DStv", "12345678901", "Compact"]] as const) {
+      let turn = startPayment(service, "", "Ada");
+      for (const answer of [provider, number, plan, "1000"]) {
+        if (!turn.state) throw new Error("Expected conversation");
+        turn = answerPayment(turn.state, answer, "Ada");
+      }
+      expect(turn.preview?.rows).toContainEqual(["Plan / package", plan]);
+      expect(turn.preview?.amount).toBe(1000);
+    }
+  });
 });
