@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Fingerprint, LockKeyhole, ShieldCheck, Check } from "lucide-react";
 import { currentUser, normalisePhone, resetDemoPin, signIn, signUp } from "@/lib/demo-store";
+import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiometrics } from "@/lib/biometrics";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
 
