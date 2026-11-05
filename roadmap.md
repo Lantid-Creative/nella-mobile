@@ -1,4 +1,5 @@
 # Nella WhatsApp-to-app coverage
+- [x] Outline prioritized mobile functionality, UI/UX, optimization, fixes and launch acceptance criteria.
 - [x] Audit the original repository's customer WhatsApp functionality.
 - [x] Provision mobile chat sheets for onboarding, payment previews, account funding, activity, notifications, support and supporting-service availability.
 - [x] Document full source coverage and integration gaps; verify mobile demo flows and 13 tests.
