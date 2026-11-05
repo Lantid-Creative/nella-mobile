@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { ArrowLeft, ArrowRight, ArrowDownToLine, Bell, Check, CircleHelp, FileText, Fingerprint, Landmark, LockKeyhole, ReceiptText, ShieldCheck, Smartphone, Wallet, X, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowDownToLine, Bell, Check, CircleHelp, FileText, ScanFace, Landmark, LockKeyhole, ReceiptText, ShieldCheck, Smartphone, Wallet, X, Zap } from "lucide-react";
 import { biometricsAvailable, disableBiometrics, enableBiometrics, hasBiometrics } from "@/lib/biometrics";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -73,14 +73,14 @@ function BiometricSetting({ user }: { user: DemoUser }) {
   const toggle = async () => {
     setBusy(true); setMessage("");
     try {
-      if (enabled) { disableBiometrics(user.phone); setEnabled(false); setMessage("Fingerprint unlock is off. Your PIN still works."); }
-      else { await enableBiometrics(user.phone, user.name); setEnabled(true); setMessage("Fingerprint unlock is on. Next time you open Nella, use your fingerprint or face to log in."); }
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Fingerprint setup failed. Your PIN still works."); }
+      if (enabled) { disableBiometrics(user.phone); setEnabled(false); setMessage("Biometric unlock is off. Your PIN still works."); }
+      else { await enableBiometrics(user.phone, user.name); setEnabled(true); setMessage("Biometric unlock is on. Next time you open Nella, use your fingerprint, face or phone unlock to log in."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Biometric setup failed. Your PIN still works."); }
     finally { setBusy(false); }
   };
   return <div className="rounded-xl border border-border p-4">
-    <div className="flex items-center gap-3"><Fingerprint className="h-6 w-6 shrink-0 text-primary" /><div className="min-w-0"><p className="text-sm font-bold">Fingerprint / face unlock</p><p className="mt-0.5 text-xs text-muted-foreground">{available ? "Open the app without typing your PIN. Payments still need your PIN." : "This device doesn't offer fingerprint or face unlock here."}</p></div></div>
-    {available && <Button variant={enabled ? "outline" : "default"} className="mt-3 h-11 w-full" disabled={busy} onClick={() => void toggle()}>{busy ? "Waiting for your device…" : enabled ? "Turn off fingerprint unlock" : "Set up fingerprint unlock"}</Button>}
+    <div className="flex items-center gap-3"><ScanFace className="h-6 w-6 shrink-0 text-primary" /><div className="min-w-0"><p className="text-sm font-bold">Biometric unlock</p><p className="mt-0.5 text-xs text-muted-foreground">{available ? "Open the app with your fingerprint, face or your phone's unlock method. Payments still need your PIN." : "This device doesn't offer biometric unlock here."}</p></div></div>
+    {available && <Button variant={enabled ? "outline" : "default"} className="mt-3 h-11 w-full" disabled={busy} onClick={() => void toggle()}>{busy ? "Waiting for your device…" : enabled ? "Turn off biometric unlock" : "Set up biometric unlock"}</Button>}
     {message && <p role="status" className="mt-3 text-xs leading-relaxed text-muted-foreground">{message}</p>}
   </div>;
 }
