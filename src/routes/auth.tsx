@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ScanFace, LockKeyhole, ShieldCheck, Check } from "lucide-react";
-import { canEnterChat, completeDemoKyc, completeOnboarding, currentUser, normalisePhone, resetDemoPin, signIn, signInVerified, signUp } from "@/lib/demo-store";
+import { canEnterChat, completeDemoKyc, completeOnboarding, currentUser, normalisePhone, resetDemoPin, seedDemoLogin, signIn, signInVerified, signUp } from "@/lib/demo-store";
 import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiometrics } from "@/lib/biometrics";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
