@@ -78,9 +78,9 @@ export function NellaCamera({ onCapture, onClose, onFallback }: Props) {
   }, []);
 
   const pinchDistance = () => {
-    const points = [...pointersRef.current.values()];
-    if (points.length < 2) return 0;
-    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    const [a, b] = [...pointersRef.current.values()];
+    if (!a || !b) return 0;
+    return Math.hypot(a.x - b.x, a.y - b.y);
   };
 
   const onPointerDown = (event: React.PointerEvent) => {
