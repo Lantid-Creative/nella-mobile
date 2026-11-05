@@ -1,5 +1,4 @@
-# Mobile Nella refinement
-- [x] Review original Nella branding and onboarding context.
-- [x] Improve login and guided new-customer demo setup.
-- [x] Refine mobile chat and animate Nella's greeting.
-- [x] Verify mobile setup, login, chat and existing tests.
+# Nella WhatsApp-to-app coverage
+- [ ] Audit the original repository's customer WhatsApp functionality.
+- [ ] Provision matching mobile chat, onboarding, transaction, notification and receipt experiences without claiming live banking.
+- [ ] Document integration gaps and verify mobile flows and tests.
