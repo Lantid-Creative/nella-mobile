@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeftRight,
   ArrowUp,
+  Bell,
   CalendarClock,
   Camera,
   CircleHelp,
@@ -34,6 +35,8 @@ import {
 } from "@/lib/demo-store";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
+import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
+import { panelForMessage, type AppPanel, type ReceiptPreview } from "@/lib/app-provisions";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/chat")({
@@ -86,9 +89,8 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     label: "Pay a bill",
-    prompt: "Snap a bill",
+    prompt: "Pay a bill",
     icon: ReceiptText,
-    attachment: true,
   },
 ];
 
@@ -99,6 +101,7 @@ function ChatPage() {
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [panel, setPanel] = useState<AppPanel | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [notice, setNotice] = useState("");
   const [photoMenu, setPhotoMenu] = useState(false);
@@ -199,6 +202,11 @@ function ChatPage() {
     setText("");
     inputRef.current?.focus();
     if (inputRef.current) inputRef.current.style.height = "auto";
+    const requestedPanel = media ? null : panelForMessage(t);
+    if (requestedPanel) {
+      setPanel(requestedPanel);
+      return;
+    }
     nellaSays(
       demoReply(
         media?.kind === "audio" ? "Voice note" : media?.kind === "image" ? "I snapped a bill" : t,
@@ -359,13 +367,18 @@ function ChatPage() {
   };
 
   if (!user) return <div className="min-h-screen bg-background" />;
+  const previews = msgs.flatMap(message => message.card?.kind === "preview" ? [message.card.preview] : []);
+  const keepPreview = (preview: ReceiptPreview) => {
+    commit([...msgsRef.current, { id: uid(), role: "nella", at: Date.now(), card: { kind: "preview", preview } }]);
+  };
   const first = user.name.split(" ")[0] || "there";
   const empty = msgs.length === 0;
 
   return (
     <div className="chat-surface mx-auto flex h-[var(--app-height,100dvh)] min-h-0 max-w-3xl flex-col overflow-hidden">
-      <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-card px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex min-w-0 items-center gap-3"><NellaMascot small /><div className="min-w-0"><p className="text-lg font-extrabold text-primary">nella<span className="text-foreground">.</span></p><p className="text-[11px] text-muted-foreground">Your money companion</p></div></div>
+        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground" aria-label="Notifications" title="Notifications" onClick={() => setPanel("notifications")}><Bell /></Button>
         <Button variant="plain" size="none"
           onClick={() => {
             setMenu((m) => !m);
@@ -388,12 +401,15 @@ function ChatPage() {
               </div>
             </div>
             <div className="my-3 h-px bg-border" />
+            <ProfileAction icon={Wallet} label="Account & funding" onClick={() => { setMenu(false); setPanel("account"); }} />
+            <ProfileAction icon={Shield} label="Complete account setup" onClick={() => { setMenu(false); setPanel("onboarding"); }} />
+            <ProfileAction icon={Bell} label="Notifications" onClick={() => { setMenu(false); setPanel("notifications"); }} />
             <ProfileAction
               icon={History}
               label="Activity & receipts"
               onClick={() => {
                 setMenu(false);
-                send("Show my recent activity");
+                setPanel("activity");
               }}
             />
             <ProfileAction
@@ -401,7 +417,7 @@ function ChatPage() {
               label="Beneficiaries"
               onClick={() => {
                 setMenu(false);
-                send("Show my beneficiaries");
+                setPanel("beneficiaries");
               }}
             />
             <ProfileAction
@@ -409,7 +425,7 @@ function ChatPage() {
               label="Scheduled payments"
               onClick={() => {
                 setMenu(false);
-                send("Show my scheduled payments");
+                setPanel("scheduled");
               }}
             />
             <ProfileAction
@@ -417,7 +433,7 @@ function ChatPage() {
               label="Security & PIN"
               onClick={() => {
                 setMenu(false);
-                send("Show my security");
+                setPanel("security");
               }}
             />
             <ProfileAction
@@ -425,9 +441,12 @@ function ChatPage() {
               label="Help & support"
               onClick={() => {
                 setMenu(false);
-                send("I need help");
+                setPanel("support");
               }}
             />
+            <ProfileAction icon={ReceiptText} label="Spending & statements" onClick={() => { setMenu(false); setPanel("insights"); }} />
+            <ProfileAction icon={UsersRound} label="Business payments" onClick={() => { setMenu(false); setPanel("business"); }} />
+            <ProfileAction icon={UsersRound} label="Referrals & ambassadors" onClick={() => { setMenu(false); setPanel("referrals"); }} />
             {confirmClear ? (
               <div className="mt-2 rounded-xl bg-muted p-3">
                 <p className="text-sm font-semibold">Clear this chat?</p>
@@ -488,7 +507,9 @@ function ChatPage() {
                 {QUICK_ACTIONS.map((action) => <QuickActionTile key={action.label} action={action} onClick={() => runQuickAction(action)} disabled={typing} />)}
               </div>
             </section>
-            <p className="mt-5 text-[11px] text-muted-foreground">Preview only · Banking services aren't connected</p>
+            <Button variant="link" className="mt-2 h-11" onClick={() => setPanel("services")}>All money services<ArrowUp className="rotate-45" /></Button>
+            <Button variant="ghost" className="h-11 text-xs text-muted-foreground" onClick={() => setPanel("onboarding")}><Shield />Complete your account setup</Button>
+            <p className="mt-3 text-[11px] text-muted-foreground">Preview only · Banking services aren't connected</p>
           </div>
         ) : (
           <div role="log" aria-label="Conversation with Nella" aria-live="polite" className="space-y-5 py-5">
@@ -548,6 +569,7 @@ function ChatPage() {
                       </p>
                     </div>
                   )}
+                  {m.card?.kind === "preview" && <PaymentPreviewCard receipt={m.card.preview} />}
                   {m.card?.kind === "narration" &&
                     !m.card.done &&
                     (() => {
@@ -665,6 +687,7 @@ function ChatPage() {
         )}
       </main>
 
+      <NellaServices panel={panel} onChange={setPanel} user={user} previews={previews} onPreview={keepPreview} />
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
@@ -800,6 +823,7 @@ function ChatPage() {
               id="photo-options"
             >
               <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Add a photo</p>
+              <Button variant="plain" size="none" type="button" className="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium hover:bg-accent" onClick={() => { setPhotoMenu(false); setPanel("services"); }}><Wallet className="h-4 w-4" />Money services</Button>
               <Button variant="plain" size="none"
                 type="button"
                 onClick={() => {
