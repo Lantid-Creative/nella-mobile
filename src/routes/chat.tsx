@@ -359,7 +359,7 @@ function ChatPage() {
   };
 
   if (!user) return <div className="min-h-screen bg-background" />;
-  const first = user.name.split(" ")[0];
+  const first = user.name.split(" ")[0] || "there";
   const empty = msgs.length === 0;
 
   return (
@@ -378,7 +378,7 @@ function ChatPage() {
           <span className="text-sm font-bold text-primary">{first.slice(0,1)}</span>
         </Button>
         <Dialog open={menu} onOpenChange={setMenu}>
-          <DialogContent className="max-h-[85dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6">
+          <DialogContent className="bottom-0 left-0 top-auto max-h-[85dvh] overflow-y-auto translate-x-0 translate-y-0 rounded-t-3xl p-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
             <DialogTitle>Your profile</DialogTitle>
             <DialogDescription>Manage your Nella demo account.</DialogDescription>
             <div className="flex items-start justify-between">
