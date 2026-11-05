@@ -42,6 +42,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { usePendingReply, isNearConversationBottom, shouldSendOnEnter } from "@/hooks/use-chat-behavior";
 import { useServiceNavigation } from "@/hooks/use-service-navigation";
 import { STORAGE_NOTICE } from "@/lib/demo-storage";
+import { answerPayment, startPayment, paymentService, type PaymentConversation } from "@/lib/chat-payments";
+import { SERVICE_LABELS, type PaymentDraft } from "@/lib/app-provisions";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -76,6 +78,7 @@ type QuickAction = {
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
+  { label: "Snap to pay", prompt: "", icon: Camera, attachment: true },
   {
     label: "Balance",
     prompt: "Check my balance",
@@ -106,7 +109,15 @@ function ChatPage() {
   const reply = usePendingReply();
   const typing = reply.pending;
   const [menu, setMenu] = useState(false);
-  const { panel, change: setPanel, back: panelBack, depth: panelDepth } = useServiceNavigation();
+  const { panel, change: changePanel, back: panelBack, depth: panelDepth } = useServiceNavigation();
+  const [payment, setPayment] = useState<PaymentConversation | null>(null);
+  const [chatChoices, setChatChoices] = useState<string[]>([]);
+  const setPanel = (next: AppPanel | null) => {
+    if (next && (next in SERVICE_LABELS || next === "services")) {
+      changePanel(null);
+      send(next === "services" ? "All money services" : SERVICE_LABELS[next as keyof typeof SERVICE_LABELS]);
+    } else changePanel(next);
+  };
   const [newMessages, setNewMessages] = useState(false);
   const [visibleCount, setVisibleCount] = useState(40);
   const scrollRef = useRef<HTMLElement>(null);
@@ -218,6 +229,31 @@ function ChatPage() {
     ]);
     setText("");
     if (inputRef.current) inputRef.current.style.height = "auto";
+    if (media) {
+      nellaSays([{ text: `${media.kind === "image" ? "I can’t read payment details from photos yet." : "Voice transcription isn’t connected yet."} No payment has been made. ${payment ? "Please reply to my last question here in chat." : "What would you like to pay for?"}` }]);
+      if (!payment) setChatChoices(Object.values(SERVICE_LABELS));
+      return;
+    }
+    const service = paymentService(t);
+    if (service === "services") {
+      setPayment(null);
+      setChatChoices(Object.values(SERVICE_LABELS));
+      nellaSays([{ text: "What would you like to pay for?" }]);
+      return;
+    }
+    const requested = panelForMessage(t);
+    if (service || (payment && !requested)) {
+      const turn = service && (!payment || service !== payment.draft.service || /^(send money|buy airtime|buy data|electricity|cable tv)$/i.test(t))
+        ? startPayment(service, t, user.name)
+        : payment ? answerPayment(payment, t, user.name) : null;
+      if (turn) {
+        setPayment(turn.state);
+        setChatChoices(turn.choices ?? []);
+        nellaSays([{ text: turn.text, ...(turn.preview ? { card: { kind: "preview" as const, preview: turn.preview } } : {}) }]);
+        return;
+      }
+    }
+    setChatChoices([]);
     const requestedPanel = media ? null : panelForMessage(t);
     if (requestedPanel) {
       inputRef.current?.blur();
@@ -471,6 +507,8 @@ function ChatPage() {
                   <Button variant="plain" size="none"
                     onClick={() => {
                       reply.cancel();
+                      setPayment(null);
+                      setChatChoices([]);
                       commit([]);
                       setConfirmClear(false);
                       setMenu(false);
@@ -519,6 +557,7 @@ function ChatPage() {
                 {QUICK_ACTIONS.map((action) => <QuickActionTile key={action.label} action={action} onClick={() => runQuickAction(action)} disabled={typing} />)}
               </div>
             </section>
+            <Button variant="ghost" className="mt-2 h-11" onClick={() => void startVoiceRecording()}><Mic />Voice note</Button>
             <Button variant="link" className="mt-2 h-11" onClick={() => setPanel("services")}>All money services<ArrowUp className="rotate-45" /></Button>
             <Button variant="ghost" className="h-11 text-xs text-muted-foreground" onClick={() => setPanel("onboarding")}><Shield />Complete your account setup</Button>
             <p className="mt-3 text-[11px] text-muted-foreground">Preview only · Banking services aren't connected</p>
@@ -695,13 +734,14 @@ function ChatPage() {
                 </div>
               </div>
             )}
+            {!typing && chatChoices.length > 0 && <div className="flex flex-wrap gap-2 pl-9" aria-label="Chat replies">{chatChoices.map(choice => <Button key={choice} variant="outline" className="min-h-11 max-w-full whitespace-normal" onClick={() => send(choice)}>{choice}</Button>)}</div>}
             <div ref={endRef} />
           </div>
         )}
       </main>
 
       {newMessages && <Button variant="secondary" className="mx-auto my-2 h-11 shrink-0" onClick={() => { followsBottom.current = true; setNewMessages(false); endRef.current?.scrollIntoView({ block: "end" }); }}><ArrowDown />New messages</Button>}
-      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onPreview={keepPreview} />
+      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={(draft: PaymentDraft) => { changePanel(null); if (reply.busy.current) return; const turn = startPayment(draft.service, "", user.name, draft); setPayment(turn.state); setChatChoices(turn.choices ?? []); keepPreview(turn.preview ?? { title: SERVICE_LABELS[draft.service], amount: Number(draft.amount), rows: [] }); nellaSays([{ text: turn.text }]); }} />
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
