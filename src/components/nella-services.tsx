@@ -60,6 +60,31 @@ function PanelBody({ panel, onChange, user, previews, onReuse, support, setSuppo
   return <div className="space-y-4"><Info title="Business services" text="The original Nella product includes invoice, collection and bulk-payment flows. Business account access and approvals must be connected before using them here." />{["Create & track invoices", "Request & collect payments", "Payroll & bulk transfers", "Business spending & statements", "Staff roles & payment approvals", "Payment reminders"].map(label => <div key={label} className="flex items-center justify-between gap-3 border-b border-border py-3"><p className="text-sm font-semibold">{label}</p><span className="shrink-0 text-xs text-muted-foreground">Not connected</span></div>)}<Button variant="outline" className="h-12 w-full" onClick={() => onChange("support")}>Business account help<ArrowRight /></Button></div>;
 }
 
+function BiometricSetting({ user }: { user: DemoUser }) {
+  const [available, setAvailable] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    void biometricsAvailable().then(ok => { if (active) { setAvailable(ok); setEnabled(hasBiometrics(user.phone)); } });
+    return () => { active = false; };
+  }, [user.phone]);
+  const toggle = async () => {
+    setBusy(true); setMessage("");
+    try {
+      if (enabled) { disableBiometrics(user.phone); setEnabled(false); setMessage("Fingerprint unlock is off. Your PIN still works."); }
+      else { await enableBiometrics(user.phone, user.name); setEnabled(true); setMessage("Fingerprint unlock is on. Next time you open Nella, use your fingerprint or face to log in."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Fingerprint setup failed. Your PIN still works."); }
+    finally { setBusy(false); }
+  };
+  return <div className="rounded-xl border border-border p-4">
+    <div className="flex items-center gap-3"><Fingerprint className="h-6 w-6 shrink-0 text-primary" /><div className="min-w-0"><p className="text-sm font-bold">Fingerprint / face unlock</p><p className="mt-0.5 text-xs text-muted-foreground">{available ? "Open the app without typing your PIN. Payments still need your PIN." : "This device doesn't offer fingerprint or face unlock here."}</p></div></div>
+    {available && <Button variant={enabled ? "outline" : "default"} className="mt-3 h-11 w-full" disabled={busy} onClick={() => void toggle()}>{busy ? "Waiting for your device…" : enabled ? "Turn off fingerprint unlock" : "Set up fingerprint unlock"}</Button>}
+    {message && <p role="status" className="mt-3 text-xs leading-relaxed text-muted-foreground">{message}</p>}
+  </div>;
+}
+
 export function PaymentPreviewCard({ receipt }: { receipt: ReceiptPreview }) {
   return <div className="rounded-lg border border-border bg-card p-4"><p className="text-xs font-bold text-muted-foreground">PAYMENT BREAKDOWN</p><h3 className="mt-2 text-sm font-semibold">{receipt.title}</h3><p className="mt-1 break-all text-2xl font-extrabold">{naira(receipt.amount)}</p><dl className="mt-3 space-y-2 text-xs">{receipt.rows.filter(([key]) => ["Recipient account", "Phone number", "Meter number", "Smartcard number", "Bank", "Provider", "Narration", "Plan / package"].includes(key)).map(([key, value]) => <div key={key} className="flex justify-between gap-3"><dt className="text-muted-foreground">{key}</dt><dd className="break-all text-right font-semibold">{value}</dd></div>)}</dl><p className="mt-3 text-xs text-muted-foreground">Not submitted · No money has moved.</p></div>;
 }
