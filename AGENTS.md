@@ -20,3 +20,4 @@
 - Extract natural payment details through the shared request parser before prompting, using the active account phone for self-purchases; never infer a network or confuse recipient/plan numbers with money.
 - Keep approval PIN input in an ephemeral private dialog bound to the current chat draft; local demo PIN checks never authorize payments or create transaction receipts.
 - `/` is the branded splash that routes to `/auth` or `/chat`; sign-out and entry links point at `/auth`, never back to the splash.
+- Fingerprint/face unlock uses the WebAuthn platform authenticator via the shared biometrics module; it only opens the demo session on this device, never replaces the payment PIN, and always keeps PIN login as the fallback.
