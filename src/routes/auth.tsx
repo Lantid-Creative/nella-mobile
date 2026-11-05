@@ -1,0 +1,93 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck, Check } from "lucide-react";
+import { currentUser, normalisePhone, resetDemoPin, signIn, signUp } from "@/lib/demo-store";
+import { Button } from "@/components/ui/button";
+import { NellaMascot } from "@/components/nella-mascot";
+
+export const Route = createFileRoute("/auth")({
+  head: () => ({ meta: [
+    { title: "Nella — Log in or get started" },
+    { name: "description", content: "Log in to Nella or set up your account in a few friendly steps, then go straight to chat." },
+    { property: "og:title", content: "Nella — Log in or get started" },
+    { property: "og:description", content: "A friendly, chat-first money experience with guided account setup." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+  ] }), component: AuthPage,
+});
+
+function AuthPage() {
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<"in" | "up" | "reset">("in");
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
+  const [showPin, setShowPin] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  useEffect(() => { if (currentUser()) navigate({ to: "/chat", replace: true }); }, [navigate]);
+  const switchMode = (next: typeof mode) => { setMode(next); setStep(0); setPin(""); setPin2(""); setError(""); setSuccess(""); };
+  const submit = (e: FormEvent) => {
+    e.preventDefault(); setError(""); setSuccess("");
+    try {
+      if (mode === "up" && step === 0) { setStep(1); return; }
+      if (mode === "up" && step === 1) {
+        if (name.trim().split(/\s+/).length < 2) throw new Error("Enter your first and last name.");
+        if (!normalisePhone(phone)) throw new Error("Enter a valid Nigerian phone number.");
+        setStep(2); return;
+      }
+      if (mode === "up") {
+        if (pin !== pin2) throw new Error("The two PINs don't match.");
+        signUp(name, phone, pin); navigate({ to: "/chat" });
+      } else if (mode === "reset") {
+        if (pin !== pin2) throw new Error("The two PINs don't match.");
+        resetDemoPin(phone, pin); switchMode("in"); setSuccess("Your demo PIN has been reset in this browser. You can log in now.");
+      } else { signIn(phone, pin); navigate({ to: "/chat" }); }
+    } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong. Try again."); }
+  };
+  const field = "h-13 w-full min-w-0 rounded-xl border border-input bg-card px-4 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/10";
+  const digits = (v: string) => v.replace(/\D/g, "").slice(0, 4);
+  const title = mode === "in" ? "Welcome back." : mode === "reset" ? "Let's get you back in." : step === 0 ? "Hi, I'm Nella." : step === 1 ? "Let's get to know you." : "A PIN, just for you.";
+  const subtitle = mode === "in" ? "Your money companion is right here." : mode === "reset" ? "Reset the demo PIN saved in this browser." : step === 0 ? "Your money, in a chat. Let's get you started." : step === 1 ? "What should I call you?" : "Choose a 4-digit test PIN to access this demo.";
+  return (
+    <main className="auth-surface flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
+        <header className="grid h-12 grid-cols-[minmax(0,1fr)_auto] items-center">
+          <div>{mode !== "in" && <Button variant="ghost" size="icon" aria-label="Go back" className="h-11 w-11 rounded-full" onClick={() => { if (mode === "up" && step > 0) { setStep(step - 1); setError(""); } else switchMode("in"); }}><ArrowLeft /></Button>}</div>
+          <span className="text-2xl font-extrabold text-primary">nella<span className="text-foreground">.</span></span>
+        </header>
+        {mode === "up" && <div aria-label={`Setup step ${step + 1} of 3`} className="mt-4 flex gap-2">{[0,1,2].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-border"}`} />)}</div>}
+        <div key={`${mode}-${step}`} className="step-enter flex flex-1 flex-col justify-center py-5">
+          <div className="mb-5 flex items-center gap-3">
+            <NellaMascot className={mode === "up" && step === 0 ? "h-44 w-44 mx-auto" : "h-24 w-24"} />
+            {!(mode === "up" && step === 0) && <span className="rounded-xl rounded-bl-none bg-secondary px-4 py-2 text-sm font-semibold text-primary">{mode === "in" ? "Good to see you 👋" : step === 2 ? "Almost there!" : "Hello there 👋"}</span>}
+          </div>
+          <h1 className="text-[28px] font-extrabold leading-tight">{title}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
+          <form onSubmit={submit} className="mt-7 space-y-5">
+            {mode === "up" && step === 0 ? <div className="space-y-5">
+              {[['01', 'A little about you', 'Your name and phone number.'], ['02', 'Your private PIN', 'A test PIN for this demo.'], ['03', 'Straight into chat', 'Meet your money companion.']].map(([n,t,d]) => <div key={n} className="flex items-center gap-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-primary">{n}</span><div><p className="text-sm font-bold">{t}</p><p className="mt-0.5 text-xs text-muted-foreground">{d}</p></div></div>)}
+              <div className="border-t border-border pt-4"><p className="flex items-center gap-2 text-xs font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> When live account opening is available</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">You'll verify your NIN, BVN, date of birth and home address in a secure form. Don't send these details in chat. Identity verification isn't connected yet.</p></div>
+            </div> : <>
+              {mode === "up" && step === 1 && <label className="block space-y-2"><span className="text-sm font-semibold">Full name</span><input autoFocus className={field} required autoComplete="name" placeholder="First and last name" value={name} onChange={e => setName(e.target.value)} /></label>}
+              {(mode !== "up" || step === 1) && <label className="block space-y-2"><span className="text-sm font-semibold">Phone number</span><div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2"><span className="flex items-center rounded-xl border border-input bg-secondary px-3 text-sm font-semibold">+234</span><input aria-label="Phone number" className={field} inputMode="tel" autoComplete="tel-national" required placeholder="801 234 5678" value={phone} onChange={e => setPhone(e.target.value)} /></div></label>}
+              {(mode !== "up" || step === 2) && <>
+                <label className="block space-y-2"><span className="text-sm font-semibold">{mode === "in" ? "Demo PIN" : "Create demo PIN"}</span><div className="relative"><input aria-label={mode === "in" ? "Demo PIN" : "Create demo PIN"} autoFocus={mode === "up"} className={`${field} pr-12 text-center tabular-nums`} type={showPin ? "text" : "password"} inputMode="numeric" autoComplete={mode === "in" ? "current-password" : "new-password"} maxLength={4} minLength={4} required placeholder="4-digit PIN" value={pin} onChange={e => setPin(digits(e.target.value))} /><Button type="button" variant="ghost" size="icon" aria-label={showPin ? "Hide PIN" : "Show PIN"} className="absolute right-1 top-1 h-11 w-11 text-muted-foreground" onClick={() => setShowPin(!showPin)}>{showPin ? <EyeOff /> : <Eye />}</Button></div></label>
+                {mode !== "in" && <label className="block space-y-2"><span className="text-sm font-semibold">Confirm demo PIN</span><input className={`${field} text-center tabular-nums`} type={showPin ? "text" : "password"} inputMode="numeric" autoComplete="new-password" maxLength={4} minLength={4} required placeholder="Enter your PIN again" value={pin2} onChange={e => setPin2(digits(e.target.value))} /></label>}
+                {mode === "in" && <div className="flex justify-end"><Button type="button" variant="link" className="h-11 px-0 text-sm" onClick={() => switchMode("reset")}>Forgot demo PIN?</Button></div>}
+              </>}
+            </>}
+            {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+            {success && <p role="status" className="flex items-start gap-2 text-sm text-primary"><Check className="h-5 w-5 shrink-0" />{success}</p>}
+            <Button type="submit" className="h-13 w-full rounded-xl font-bold shadow-glow">{mode === "in" ? "Log in" : mode === "reset" ? "Reset demo PIN" : step === 0 ? "Let's get started" : step === 1 ? "Continue" : "Meet Nella"}<ArrowRight /></Button>
+          </form>
+          {mode === "in" && <p className="mt-6 text-center text-sm text-muted-foreground">New to Nella? <Button variant="link" className="h-11 px-1 font-bold" onClick={() => switchMode("up")}>Get started</Button></p>}
+          {mode === "up" && step === 2 && <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Use a unique test PIN, not your banking PIN. This demo stores it in this browser only.</p>}
+        </div>
+        <footer className="border-t border-border pt-4 text-center"><p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><LockKeyhole className="h-3.5 w-3.5" /> Preview only · No real money moves</p><p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">Accounts stay in this browser. Live banking isn't connected.</p></footer>
+      </div>
+    </main>
+  );
+}

@@ -149,7 +149,7 @@ function ChatPage() {
   useEffect(() => {
     const u = currentUser();
     if (!u) {
-      navigate({ to: "/", replace: true });
+      navigate({ to: "/auth", replace: true });
       return;
     }
     setUser(u);
@@ -552,7 +552,7 @@ function ChatPage() {
               onClick={() => {
                 reply.cancel();
                 if (!signOut()) { setNotice(STORAGE_NOTICE); return; }
-                navigate({ to: "/", replace: true });
+                navigate({ to: "/auth", replace: true });
               }}
               className="flex min-h-11 w-full items-center justify-start gap-3 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
             >

@@ -91,6 +91,7 @@
   --sidebar: oklch(0.2 0.05 265); --sidebar-foreground: oklch(0.97 0.01 250); --sidebar-primary: oklch(0.56 0.22 262); --sidebar-primary-foreground: oklch(0.99 0 0); --sidebar-accent: oklch(0.28 0.08 264); --sidebar-accent-foreground: oklch(0.97 0.01 250); --sidebar-border: oklch(1 0 0 / 10%); --sidebar-ring: oklch(0.64 0.2 254);
   --gradient-hero: linear-gradient(180deg, var(--secondary), var(--background) 48%);
   --gradient-orb: radial-gradient(circle at 35% 30%, oklch(0.98 0.02 240) 0%, var(--primary-glow) 25%, var(--primary-deep) 70%, oklch(0.12 0.04 265) 100%);
+  --gradient-splash: radial-gradient(130% 90% at 50% 26%, oklch(0.3 0.09 264) 0%, oklch(0.19 0.07 266) 52%, oklch(0.11 0.05 268) 100%);
   --shadow-glow: 0 8px 24px -10px color-mix(in oklab, var(--primary) 25%, transparent);
   --shadow-lip: 0 3px 0 0 var(--primary-deep);
 }
@@ -117,7 +118,15 @@
 .auth-surface { background: var(--background); }
 .step-enter { animation: step-enter 240ms ease-out; }
 @keyframes step-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter, .animate-bounce, .animate-pulse { animation: none; } }
+.splash-surface { background: var(--gradient-splash); }
+.splash-enter { animation: step-enter 320ms ease-out; }
+.splash-leave { animation: splash-leave 260ms ease-in forwards; }
+.splash-orb { animation: splash-breathe 2.8s ease-in-out infinite; }
+.splash-dot { animation: splash-dot 1.2s ease-in-out infinite; }
+@keyframes splash-breathe { 0%, 100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 0.95; } }
+@keyframes splash-dot { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+@keyframes splash-leave { to { opacity: 0; transform: scale(1.03); } }
+@media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter, .splash-orb, .splash-dot, .splash-leave, .animate-bounce, .animate-pulse { animation: none; } }
 .nella-sheet > button:last-child { display: none; }
 .nella-profile > button:last-child { position: sticky; bottom: 0; margin-left: auto; background: var(--card); }
 .nella-sheet { bottom: max(0px, calc(100dvh - var(--app-height,100dvh))); }
