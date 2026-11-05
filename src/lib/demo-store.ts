@@ -89,7 +89,7 @@ export function signIn(phoneRaw: string, pin: string) {
   setSession(u.phone);
 }
 
-/** Signs in after the device has verified the owner with fingerprint/face (demo only). */
+/** Signs in after the device has verified the owner with its biometric unlock (demo only). */
 export function signInVerified(phoneRaw: string) {
   const phone = normalisePhone(phoneRaw);
   const u = phone ? readUsers().find((x) => x.phone === phone) : undefined;
