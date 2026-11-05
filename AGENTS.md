@@ -12,3 +12,5 @@
 - Keep existing demo-account and banking behavior during presentation refinements; UI completion must not imply verified live banking.
 - Compose welcome and chat identity from the shared Nella mascot component, and use design-system buttons for all updated controls.
 - Keep new-customer setup inside the public entry page with progressive steps, then navigate directly to chat; this preserves the minimal navigation model.
+- Provision customer services through shared chat-triggered sheets and typed presentation intents; preserve the existing payment parser and keep previews distinct from verified transactions.
+- Do not collect identity documents or banking PINs in the browser demo; enable secure account verification and provider-backed authorization before accepting sensitive live-account inputs.

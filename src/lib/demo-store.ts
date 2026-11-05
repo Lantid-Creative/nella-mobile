@@ -1,4 +1,5 @@
 // Demo-only storage in this browser. No real bank, no real money.
+import type { ReceiptPreview } from "./app-provisions";
 export type DemoUser = { name: string; phone: string; pin: string };
 
 export type ApprovalCard = {
@@ -12,6 +13,7 @@ export type ApprovalCard = {
 };
 
 export type Card =
+  | { kind: "preview"; preview: ReceiptPreview }
   | { kind: "balance"; amount: string }
   | { kind: "narration"; pending: ApprovalCard; done?: boolean }
   | ApprovalCard
