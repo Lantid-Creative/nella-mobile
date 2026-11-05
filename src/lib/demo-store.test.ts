@@ -39,6 +39,15 @@ describe("demo preview account and chat", () => {
     signIn("08012345678", "1234");
     expect(canEnterChat(currentUser())).toBe(true);
   });
+  it("seeds a ready demo account that can enter chat and log in with the demo PIN", () => {
+    seedDemoLogin();
+    expect(canEnterChat(currentUser())).toBe(true);
+    expect(currentUser()?.phone).toBe(DEMO_PHONE);
+    signIn(DEMO_PHONE, DEMO_PIN);
+    expect(canEnterChat(currentUser())).toBe(true);
+    seedDemoLogin();
+    expect(canEnterChat(currentUser())).toBe(true);
+  });
   it("requires older accounts without a completion record to finish setup", () => {
     localStorage.setItem("nella.users.v2", JSON.stringify([{ name: "Ada Okafor", phone: "8012345678", pin: "1234" }]));
     signIn("08012345678", "1234");
