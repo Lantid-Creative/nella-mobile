@@ -24,9 +24,15 @@ const questions = (draft: PaymentDraft): Record<PaymentField, string> => ({
   amount: "How much in naira?",
   narration: "What’s this transfer for? You can skip the narration.",
 });
+const dataPlans = ["1GB · 1 day", "2GB · 7 days", "5GB · 30 days", "10GB · 30 days", "25GB · 30 days"];
+const cablePlans = ["DStv Padi", "DStv Yanga", "DStv Compact", "GOtv Smallie", "GOtv Jinja", "GOtv Max", "StarTimes Nova", "StarTimes Classic"];
 function choices(state: PaymentConversation): string[] {
   if (state.field === "provider") return providers[state.draft.service];
-  if (state.field === "plan" && state.draft.service === "electricity") return ["Prepaid", "Postpaid"];
+  if (state.field === "plan") {
+    if (state.draft.service === "electricity") return ["Prepaid", "Postpaid"];
+    if (state.draft.service === "data") return dataPlans;
+    if (state.draft.service === "cable") return cablePlans.filter(plan => !state.draft.provider || plan.toLowerCase().startsWith(state.draft.provider.toLowerCase()));
+  }
   if (state.field === "narration") return ["Rent", "Family", "Skip"];
   if (state.field === "review") return ["Approve payment", "Edit details", "Cancel"];
   return [];
