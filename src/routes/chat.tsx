@@ -36,6 +36,7 @@ import {
 } from "@/lib/demo-store";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
+import { NellaCamera } from "@/components/nella-camera";
 import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
 import { panelForMessage, type AppPanel, type ReceiptPreview } from "@/lib/app-provisions";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -125,6 +126,7 @@ function ChatPage() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [notice, setNotice] = useState("");
   const [photoMenu, setPhotoMenu] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<{ file: File; url: string } | null>(null);
   const [voiceMode, setVoiceMode] = useState<"idle" | "recording" | "review">("idle");
   const [voiceUrl, setVoiceUrl] = useState("");
