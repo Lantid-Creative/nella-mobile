@@ -126,10 +126,7 @@ function AuthPage() {
           <h1 className="text-[28px] font-extrabold leading-tight">{title}</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
           <form onSubmit={submit} className="mt-7 space-y-5">
-            {mode === "up" && step === 3 ? <div className="space-y-5">
-              <dl className="divide-y divide-border text-sm">{[["Full name", name], ["Phone number", `+234 ${normalisePhone(phone) ?? phone}`], ["Demo PIN", "Created"]].map(([label, value]) => <div key={label} className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">{label}</dt><dd className="min-w-0 break-words text-right font-semibold">{value}</dd></div>)}</dl>
-              <div className="border-l-2 border-primary pl-4"><p className="flex items-center gap-2 text-sm font-bold"><ShieldCheck className="h-5 w-5 text-primary" />Live account verification</p><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Not connected yet. Your demo setup does not open a bank account or enable real payments. Do not provide NIN, BVN, identity documents or your banking PIN here.</p></div>
-            </div> : mode === "up" && step === 0 ? <div className="space-y-5">
+            {mode === "up" && step === 0 ? <div className="space-y-5">
               {[['01', 'A little about you', 'Your name and phone number.'], ['02', 'Your private PIN', 'A test PIN for this demo.'], ['03', 'Required KYC setup', 'Review your identity and sample address before chat.']].map(([n,t,d]) => <div key={n} className="flex items-center gap-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-primary">{n}</span><div><p className="text-sm font-bold">{t}</p><p className="mt-0.5 text-xs text-muted-foreground">{d}</p></div></div>)}
               <div className="border-t border-border pt-4"><p className="flex items-center gap-2 text-xs font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> When live account opening is available</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">You'll verify your NIN, BVN, date of birth and home address in a secure form. Don't send these details in chat. Identity verification isn't connected yet.</p></div>
             </div> : <>
