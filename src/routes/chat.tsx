@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import {
   currentUser,
+  canEnterChat,
   demoReply,
   loadChat,
   naira,
@@ -149,7 +150,7 @@ function ChatPage() {
 
   useEffect(() => {
     const u = currentUser();
-    if (!u) {
+    if (!u || !canEnterChat(u)) {
       navigate({ to: "/auth", replace: true });
       return;
     }

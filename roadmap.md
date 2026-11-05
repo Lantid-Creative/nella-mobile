@@ -1,4 +1,5 @@
 # Nella WhatsApp-to-app coverage
+- [x] Require onboarding completion before chat; verified mobile signup, direct-entry blocking, refresh recovery and completed-account entry, with 18 account/biometric/approval tests passing.
 - [x] Add fingerprint/face unlock (WebAuthn platform authenticator): optional setup after signup, manage in Security & PIN, unlock button on login, PIN fallback preserved; verified with a virtual authenticator on mobile viewport.
 - [x] Replace downloadable previews with simple payment breakdowns in chat and prepared-payment details; remove download/share actions, preserve PIN approval, and verify mobile flow plus 39 tests.
 - [x] Add private four-digit demo PIN approval for the active chat payment, with review, invalid-PIN feedback, cancellation and no live submission; verified mobile signup-to-approval flow and all 39 tests.

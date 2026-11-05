@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { currentUser } from "@/lib/demo-store";
+import { canEnterChat, currentUser } from "@/lib/demo-store";
 import { NellaMascot } from "@/components/nella-mascot";
 import { LockKeyhole } from "lucide-react";
 
@@ -22,7 +22,7 @@ function SplashScreen() {
   useEffect(() => {
     const go = () => {
       setLeaving(true);
-      setTimeout(() => navigate({ to: currentUser() ? "/chat" : "/auth", replace: true }), 260);
+      setTimeout(() => navigate({ to: canEnterChat(currentUser()) ? "/chat" : "/auth", replace: true }), 260);
     };
     const t = setTimeout(go, 1900);
     return () => clearTimeout(t);
@@ -34,7 +34,7 @@ function SplashScreen() {
       onClick={() => {
         if (!leaving) {
           setLeaving(true);
-          setTimeout(() => navigate({ to: currentUser() ? "/chat" : "/auth", replace: true }), 260);
+          setTimeout(() => navigate({ to: canEnterChat(currentUser()) ? "/chat" : "/auth", replace: true }), 260);
         }
       }}
       className={`splash-surface splash-enter relative flex min-h-dvh select-none flex-col items-center justify-center overflow-hidden px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-center ${leaving ? "splash-leave" : ""}`}
