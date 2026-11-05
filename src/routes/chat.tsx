@@ -7,6 +7,7 @@ import {
   Bell,
   CalendarClock,
   Camera,
+  ChevronRight,
   CircleHelp,
   History,
   ImagePlus,
