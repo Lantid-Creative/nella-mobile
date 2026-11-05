@@ -1,4 +1,7 @@
 # Nella WhatsApp-to-app coverage
+- [ ] Implement approved mobile hardening: reply cancellation, scroll stability, sheet navigation/drafts, storage validation and accessibility.
+- [ ] Verify updated mobile flows and regression tests.
+- [ ] Connect existing customer services — blocked: source exposes merchant APIs, not a verified personal-customer login/account adapter.
 - [x] Outline prioritized mobile functionality, UI/UX, optimization, fixes and launch acceptance criteria.
 - [x] Audit the original repository's customer WhatsApp functionality.
 - [x] Provision mobile chat sheets for onboarding, payment previews, account funding, activity, notifications, support and supporting-service availability.

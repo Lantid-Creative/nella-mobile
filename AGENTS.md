@@ -14,3 +14,5 @@
 - Keep new-customer setup inside the public entry page with progressive steps, then navigate directly to chat; this preserves the minimal navigation model.
 - Provision customer services through shared chat-triggered sheets and typed presentation intents; preserve the existing payment parser and keep previews distinct from verified transactions.
 - Do not collect identity documents or banking PINs in the browser demo; enable secure account verification and provider-backed authorization before accepting sensitive live-account inputs.
+- Keep service drafts scoped to the active demo account in memory, never persist private approval inputs; use shared sheet history and cancellable reply work to preserve mobile navigation and focus.
+- Validate browser-preview storage on read and surface failed writes; browser state is never live-account authorization.
