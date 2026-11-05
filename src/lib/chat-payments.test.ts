@@ -2,6 +2,48 @@ import { describe, expect, it } from "vitest";
 import { answerPayment, startPayment } from "./chat-payments";
 
 describe("Chat-only payments", () => {
+  it("understands the requested bare-amount transfer and GTB alias", () => {
+    const turn = startPayment("transfer", "Send 1000 to 1212121212 GTB", "Ada");
+    expect(turn.state?.draft).toMatchObject({ amount: "1000", destination: "1212121212", provider: "GTBank" });
+    expect(turn.state?.field).toBe("narration");
+  });
+  it("retains the requested airtime phone and asks for the missing network", () => {
+    const turn = startPayment("airtime", "buy airtime for 08034648447", "Ada");
+    expect(turn.state?.draft.destination).toBe("08034648447");
+    expect(turn.state?.draft.amount).toBe("");
+    expect(turn.state?.field).toBe("provider");
+    if (!turn.state) throw new Error("Expected conversation");
+    const reply = answerPayment(turn.state, "MTN 1000", "Ada");
+    expect(reply.preview?.amount).toBe(1000);
+    expect(reply.preview?.rows).toContainEqual(["Phone number", "08034648447"]);
+  });
+  it("uses the active customer's number for buy data for me without guessing network or plan", () => {
+    const turn = startPayment("data", "buy data for me", "Ada", undefined, "8034648447");
+    expect(turn.state?.draft).toMatchObject({ destination: "08034648447", provider: "", plan: "", amount: "" });
+    expect(turn.state?.field).toBe("provider");
+    if (!turn.state) throw new Error("Expected conversation");
+    const reply = answerPayment(turn.state, "MTN 2GB", "Ada", "8034648447");
+    expect(reply.state?.draft.plan).toBe("2GB");
+    expect(reply.state?.draft.amount).toBe("");
+    expect(reply.state?.field).toBe("amount");
+  });
+  it("asks for a phone when self-purchase has no valid active phone", () => {
+    const turn = startPayment("data", "buy data for me MTN", "Ada");
+    expect(turn.state?.field).toBe("destination");
+  });
+  it("accepts multiple transfer details in a reply and canonicalizes GTB", () => {
+    const state = startPayment("transfer", "Send money", "Ada").state;
+    if (!state) throw new Error("Expected conversation");
+    const turn = answerPayment(state, "1212121212 GTB 1000 naira", "Ada");
+    expect(turn.state?.draft).toMatchObject({ destination: "1212121212", provider: "GTBank", amount: "1000" });
+    expect(turn.state?.field).toBe("narration");
+  });
+  it("does not interpret a phone or data-plan size as an amount", () => {
+    const turn = startPayment("data", "buy 2GB data for 08034648447 MTN", "Ada");
+    expect(turn.state?.draft.amount).toBe("");
+    expect(turn.state?.draft.plan).toBe("2GB");
+    expect(turn.state?.field).toBe("amount");
+  });
   it("collects bank, account number, amount and narration through chat", () => {
     let turn = startPayment("transfer", "Send money", "Ada");
     for (const answer of ["GTBank", "0123456789", "5000", "Rent"]) {

@@ -1,4 +1,5 @@
 import { demoReply } from "./demo-store";
+import { parsePaymentRequest } from "./payment-request";
 import { paymentPreview, validatePaymentDraft, type MoneyService, type PaymentDraft, type ReceiptPreview } from "./app-provisions";
 
 export type PaymentField = "provider" | "destination" | "plan" | "amount" | "narration";
@@ -39,22 +40,21 @@ function next(draft: PaymentDraft, sender: string, narrationDone = false): Turn 
   if (error) return { state: { draft, field: "amount" }, text: `${error} How much in naira?` };
   return { state, text: "Here are your details. Nothing has been paid. The recipient and any fees still need verification. You can change the details here in chat. Never send your banking PIN.", preview: paymentPreview(draft, sender), choices: choices(state) };
 }
-export function startPayment(service: MoneyService, raw: string, sender: string, seed?: PaymentDraft): Turn {
+export function startPayment(service: MoneyService, raw: string, sender: string, seed?: PaymentDraft, customerPhone?: string): Turn {
   const draft: PaymentDraft = seed ? { ...seed } : { service, provider: "", destination: "", plan: "", amount: "", narration: "" };
   // Keep the existing complete-message payment parser as the source of transfer/mobile details.
   const parsed = demoReply(raw).flatMap(part => part.card?.kind === "approval" ? [part.card] : part.card?.kind === "narration" ? [part.card.pending] : [])[0];
   if (parsed && parsed.service === service) Object.assign(draft, { amount: String(parsed.amount), provider: parsed.bank, destination: parsed.account });
   if (!seed) {
-    draft.provider ||= providers[service].find(provider => raw.toLowerCase().includes(provider.toLowerCase())) ?? "";
-    const destination = raw.match(service === "transfer" ? /\b\d{10}\b/ : service === "airtime" || service === "data" ? /\b0[789][01]\d{8}\b/ : /\b\d{6,20}\b/)?.[0] ?? "";
-    draft.destination ||= destination;
-    const amount = raw.replace(destination, "").replace(/,/g, "").match(/(?:₦|NGN|naira)\s*(\d+(?:\.\d{1,2})?)\s*(k)?\b/i);
-    if (!draft.amount && amount?.[1]) draft.amount = String(Number(amount[1]) * (amount[2] ? 1000 : 1));
-    if (service === "electricity") draft.plan = raw.match(/\b(prepaid|postpaid)\b/i)?.[0] ?? "";
+    const details = parsePaymentRequest(service, raw, customerPhone);
+    Object.assign(draft, details);
+    // A legacy parser may mistake a data-plan size for money; only keep an
+    // amount explicitly identified by the conversational parser.
+    draft.amount = details.amount ?? "";
   }
   return next(draft, sender);
 }
-export function answerPayment(state: PaymentConversation, raw: string, sender: string): Turn {
+export function answerPayment(state: PaymentConversation, raw: string, sender: string, customerPhone?: string): Turn {
   const text = raw.trim();
   if (/^(cancel|stop|never mind)$/i.test(text)) return { state: null, text: "Cancelled. No payment was submitted." };
   const edit = text.match(/^(?:edit|change)\s+(amount|bank|provider|account|phone|meter|smartcard|number|plan|package|narration)(?:\s+(?:to\s+)?(.+))?$/i);
@@ -63,10 +63,23 @@ export function answerPayment(state: PaymentConversation, raw: string, sender: s
     const key = edit[1].toLowerCase();
     const field: PaymentField = key === "bank" || key === "provider" ? "provider" : ["account", "phone", "meter", "smartcard", "number"].includes(key) ? "destination" : key === "package" || key === "plan" ? "plan" : key === "narration" ? "narration" : "amount";
     const updated = { ...state, field };
-    return edit[2] ? answerPayment(updated, edit[2], sender) : { state: updated, text: questions(state.draft)[field], choices: choices(updated) };
+    return edit[2] ? answerPayment(updated, edit[2], sender, customerPhone) : { state: updated, text: questions(state.draft)[field], choices: choices(updated) };
   }
   if (state.field === "review") return { state, text: "Payments aren’t connected yet. You can edit these details or cancel. No payment has been submitted.", choices: choices(state) };
   const draft = { ...state.draft };
+  if (state.field !== "narration") {
+    const details = parsePaymentRequest(draft.service, text, customerPhone);
+    // A standalone numeric reply belongs to the field currently being asked.
+    if (state.field !== "amount" && /^\d+(?:\.\d+)?$/.test(text)) delete details.amount;
+    if (Object.keys(details).length) {
+      Object.assign(draft, details);
+      const amountError = draft.amount && (!Number.isFinite(Number(draft.amount)) || Number(draft.amount) <= 0
+        ? "Please send an amount greater than zero."
+        : (draft.service === "transfer" || draft.service === "electricity") && Number(draft.amount) < 100 ? "The minimum amount is ₦100." : "");
+      if (amountError) return { state: { draft: { ...draft, amount: "" }, field: "amount" }, text: `${amountError} How much in naira?` };
+      return next(draft, sender);
+    }
+  }
   let error = "";
   if (state.field === "amount") {
     const match = text.replace(/,/g, "").match(/^(?:₦|NGN|naira)?\s*(\d+(?:\.\d{1,2})?)\s*(k)?(?:\s*naira)?$/i);

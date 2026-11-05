@@ -236,7 +236,7 @@ function ChatPage() {
       if (!payment) setChatChoices(Object.values(SERVICE_LABELS));
       return;
     }
-    const service = paymentService(t);
+    const service = payment && /^\d{10}$/.test(t) ? null : paymentService(t);
     if (service === "services") {
       setPayment(null);
       setChatChoices(Object.values(SERVICE_LABELS));
@@ -245,9 +245,9 @@ function ChatPage() {
     }
     const requested = panelForMessage(t);
     if (service || (payment && !requested)) {
-      const turn = service && (!payment || service !== payment.draft.service || /^(send money|buy airtime|buy data|electricity|cable tv)$/i.test(t))
-        ? startPayment(service, t, user.name)
-        : payment ? answerPayment(payment, t, user.name) : null;
+      const turn = service && (!payment || service !== payment.draft.service || /^(?:please\s+)?(?:send|transfer|buy|recharge)\b|^(electricity|cable tv)$/i.test(t))
+        ? startPayment(service, t, user.name, undefined, user.phone)
+        : payment ? answerPayment(payment, t, user.name, user.phone) : null;
       if (turn) {
         setPayment(turn.state);
         setChatChoices(turn.choices ?? []);
