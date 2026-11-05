@@ -28,8 +28,30 @@ function AuthPage() {
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [bioPhone, setBioPhone] = useState<string | null>(null);
+  const [bioBusy, setBioBusy] = useState(false);
   useEffect(() => { if (currentUser()) navigate({ to: "/chat", replace: true }); }, [navigate]);
+  useEffect(() => { void biometricsAvailable().then((ok) => { if (ok) setBioPhone(biometricPhone()); }); }, []);
   const switchMode = (next: typeof mode) => { setMode(next); setStep(0); setPin(""); setPin2(""); setError(""); setSuccess(""); };
+  const unlock = async () => {
+    setBioBusy(true); setError("");
+    const phone = await unlockWithBiometrics();
+    setBioBusy(false);
+    if (!phone) { setError("Fingerprint unlock didn't work this time. Use your PIN instead."); return; }
+    signIn(phone, readPinForBio(phone));
+    navigate({ to: "/chat" });
+  };
+  const setupBiometrics = async () => {
+    setBioBusy(true); setError("");
+    try {
+      const phone = normalisePhone(phoneState);
+      if (!phone) throw new Error("Enter a valid Nigerian phone number.");
+      await enableBiometrics(phone, name);
+      setBioPhone(phone);
+      navigate({ to: "/chat" });
+    } catch (err) { setError(err instanceof Error ? err.message : "Fingerprint setup failed. Your PIN still works."); }
+    finally { setBioBusy(false); }
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault(); setError(""); setSuccess("");
     try {
