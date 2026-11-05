@@ -75,6 +75,11 @@ function AuthPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "Biometric setup failed. Your PIN still works."); }
     finally { setBioBusy(false); }
   };
+  const demoLogin = () => {
+    setError("");
+    try { seedDemoLogin(); navigate({ to: "/chat", replace: true }); }
+    catch (err) { setError(err instanceof Error ? err.message : "Couldn't open the demo account. Try again."); }
+  };
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setError(""); setSuccess("");
     try {
