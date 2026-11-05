@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { canEnterChat, currentUser } from "@/lib/demo-store";
 import { NellaMascot } from "@/components/nella-mascot";
 import { LockKeyhole } from "lucide-react";
+import nellaFooterLogo from "@/assets/nella-footer-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
@@ -42,9 +43,7 @@ function SplashScreen() {
       <div className="relative flex flex-col items-center">
         <div aria-hidden className="splash-orb pointer-events-none absolute -top-6 h-60 w-60 rounded-full bg-orb opacity-70 blur-xl" />
         <NellaMascot className="relative h-44 w-44 drop-shadow-[0_18px_40px_rgb(0_0_0/35%)]" />
-        <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-sidebar-foreground">
-          nella<span className="text-ring">.</span>
-        </h1>
+        <img src={nellaFooterLogo.url} alt="Nella" width={697} height={178} className="relative mt-6 h-9 w-auto" />
         <p className="mt-2 text-sm font-medium text-sidebar-foreground/70">Your money, in a chat.</p>
       </div>
 

@@ -6,6 +6,7 @@ import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiomet
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
 import { KycSetup } from "@/components/kyc-setup";
+import nellaLogo from "@/assets/nella-nav-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [
@@ -105,7 +106,7 @@ function AuthPage() {
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
         <header className="grid h-12 grid-cols-[minmax(0,1fr)_auto] items-center">
           <div>{mode !== "in" && step < 3 && <Button variant="ghost" size="icon" aria-label="Go back" className="h-11 w-11 rounded-full" onClick={() => { if (mode === "up" && step > 0) { setStep(step - 1); setError(""); } else switchMode("in"); }}><ArrowLeft /></Button>}</div>
-          <span className="text-2xl font-extrabold text-primary">nella<span className="text-foreground">.</span></span>
+          <span className="text-2xl font-extrabold text-primary"><img src={nellaLogo.url} alt="Nella" width={697} height={178} className="h-6 w-auto" /></span>
         </header>
         {mode === "up" && <div aria-label={`Setup step ${Math.min(step, 3) + 1} of 4`} className="mt-4 flex gap-2">{[0,1,2,3].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-border"}`} />)}</div>}
         <div key={`${mode}-${step}`} className="step-enter flex flex-1 flex-col justify-center py-5">
