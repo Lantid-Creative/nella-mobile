@@ -1,5 +1,6 @@
-// Fingerprint / face unlock for the browser preview, built on WebAuthn platform
-// authenticators. This only unlocks the demo app on this device — it never
+// Biometric unlock for the browser preview, built on WebAuthn platform
+// authenticators. The device picks its own method — fingerprint, face, iris or
+// pattern. This only unlocks the demo app on this device — it never
 // authorizes payments and never replaces the payment PIN.
 import { readDemoValue, writeDemoValue, removeDemoValue, STORAGE_NOTICE } from "./demo-storage";
 
@@ -38,7 +39,7 @@ const fromBase64Url = (value: string) => {
 
 const randomChallenge = () => crypto.getRandomValues(new Uint8Array(32));
 
-/** True when this device can verify the user with fingerprint or face. */
+/** True when this device can verify the user with a biometric or device unlock method. */
 export async function biometricsAvailable(): Promise<boolean> {
   try {
     if (typeof window === "undefined" || !window.PublicKeyCredential) return false;
@@ -48,7 +49,7 @@ export async function biometricsAvailable(): Promise<boolean> {
   }
 }
 
-/** The phone number that has fingerprint/face unlock set up on this device, if any. */
+/** The phone number that has biometric/device unlock set up on this device, if any. */
 export function biometricPhone(): string | null {
   return readRecords()[0]?.phone ?? null;
 }
@@ -58,12 +59,12 @@ export function hasBiometrics(phone: string): boolean {
 }
 
 /**
- * Registers this device's fingerprint/face for the given demo account.
+ * Registers this device's biometric unlock for the given demo account.
  * Throws a friendly error when the device can't or the user cancels.
  */
 export async function enableBiometrics(phone: string, name: string): Promise<void> {
   if (!(await biometricsAvailable()))
-    throw new Error("This device doesn't offer fingerprint or face unlock here. Your PIN still works.");
+    throw new Error("This device doesn't offer biometric unlock here. Your PIN still works.");
   try {
     const credential = (await navigator.credentials.create({
       publicKey: {
@@ -84,12 +85,12 @@ export async function enableBiometrics(phone: string, name: string): Promise<voi
   } catch (error) {
     if (error instanceof Error && error.name === "NotAllowedError")
       throw new Error("Setup was cancelled or timed out. Your PIN still works.");
-    throw error instanceof Error ? error : new Error("Fingerprint setup failed. Your PIN still works.");
+    throw error instanceof Error ? error : new Error("Biometric setup failed. Your PIN still works.");
   }
 }
 
 /**
- * Verifies the device owner with fingerprint/face and returns the phone number
+ * Verifies the device owner with its biometric unlock and returns the phone number
  * of the matching demo account, or null when verification fails.
  */
 export async function unlockWithBiometrics(): Promise<string | null> {

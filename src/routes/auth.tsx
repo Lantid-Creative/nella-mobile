@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, Fingerprint, LockKeyhole, ShieldCheck, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, ScanFace, LockKeyhole, ShieldCheck, Check } from "lucide-react";
 import { canEnterChat, completeOnboarding, currentUser, normalisePhone, resetDemoPin, signIn, signInVerified, signUp } from "@/lib/demo-store";
 import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiometrics } from "@/lib/biometrics";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ function AuthPage() {
     setBioBusy(true); setError("");
     const unlocked = await unlockWithBiometrics();
     setBioBusy(false);
-    if (!unlocked) { setError("Fingerprint unlock didn't work this time. Use your PIN instead."); return; }
+    if (!unlocked) { setError("Biometric unlock didn't work this time. Use your PIN instead."); return; }
     try { signInVerified(unlocked); resumeAccount(); }
     catch (err) { setError(err instanceof Error ? err.message : "Couldn't open your account. Use your PIN instead."); }
   };
@@ -62,7 +62,7 @@ function AuthPage() {
       await enableBiometrics(phoneNumber, name);
       setBioPhone(phoneNumber);
       finishSetup();
-    } catch (err) { setError(err instanceof Error ? err.message : "Fingerprint setup failed. Your PIN still works."); }
+    } catch (err) { setError(err instanceof Error ? err.message : "Biometric setup failed. Your PIN still works."); }
     finally { setBioBusy(false); }
   };
   const submit = async (e: FormEvent) => {
@@ -102,12 +102,12 @@ function AuthPage() {
         {mode === "up" && <div aria-label={`Setup step ${Math.min(step, 3) + 1} of 4`} className="mt-4 flex gap-2">{[0,1,2,3].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-border"}`} />)}</div>}
         <div key={`${mode}-${step}`} className="step-enter flex flex-1 flex-col justify-center py-5">
           {mode === "up" && step === 4 ? <div className="flex flex-1 flex-col justify-center">
-            <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-secondary"><Fingerprint className="h-14 w-14 text-primary" /></div>
-            <h1 className="mt-6 text-[28px] font-extrabold leading-tight">Unlock with your fingerprint.</h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Next time you open Nella, use your fingerprint or face instead of your PIN. Your payment PIN stays separate and is never replaced.</p>
+            <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-secondary"><ScanFace className="h-14 w-14 text-primary" /></div>
+            <h1 className="mt-6 text-[28px] font-extrabold leading-tight">Unlock with biometrics.</h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Next time you open Nella, use your phone's own unlock method — fingerprint, face or pattern — instead of your PIN. Your payment PIN stays separate and is never replaced.</p>
             {error && <p role="alert" className="mt-5 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
             <div className="mt-7 space-y-3">
-              <Button className="h-13 w-full rounded-xl font-bold shadow-glow" disabled={bioBusy} onClick={() => void setupBiometrics()}>{bioBusy ? "Waiting for your device…" : "Set up fingerprint unlock"}<Fingerprint /></Button>
+              <Button className="h-13 w-full rounded-xl font-bold shadow-glow" disabled={bioBusy} onClick={() => void setupBiometrics()}>{bioBusy ? "Waiting for your device…" : "Set up biometric unlock"}<ScanFace /></Button>
               <Button variant="ghost" className="h-12 w-full" onClick={finishSetup}>Maybe later</Button>
             </div>
           </div> : <>
@@ -136,7 +136,7 @@ function AuthPage() {
             {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
             {success && <p role="status" className="flex items-start gap-2 text-sm text-primary"><Check className="h-5 w-5 shrink-0" />{success}</p>}
             <Button type="submit" className="h-13 w-full rounded-xl font-bold shadow-glow">{mode === "in" ? "Log in" : mode === "reset" ? "Reset demo PIN" : step === 0 ? "Let's get started" : step === 1 ? "Continue" : step === 2 ? "Create demo account" : "Complete setup"}<ArrowRight /></Button>
-            {mode === "in" && bioPhone && <Button type="button" variant="outline" className="h-13 w-full rounded-xl font-bold" disabled={bioBusy} onClick={() => void unlock()}><Fingerprint className="text-primary" />{bioBusy ? "Waiting for your device…" : "Unlock with fingerprint"}</Button>}
+            {mode === "in" && bioPhone && <Button type="button" variant="outline" className="h-13 w-full rounded-xl font-bold" disabled={bioBusy} onClick={() => void unlock()}><ScanFace className="text-primary" />{bioBusy ? "Waiting for your device…" : "Unlock with biometrics"}</Button>}
           </form>
           {mode === "in" && <p className="mt-6 text-center text-sm text-muted-foreground">New to Nella? <Button variant="link" className="h-11 px-1 font-bold" onClick={() => switchMode("up")}>Get started</Button></p>}
           {mode === "up" && step === 2 && <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Use a unique test PIN, not your banking PIN. This demo stores it in this browser only.</p>}
