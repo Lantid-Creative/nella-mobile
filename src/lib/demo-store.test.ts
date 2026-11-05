@@ -48,6 +48,20 @@ describe("demo preview account and chat", () => {
     seedDemoLogin();
     expect(canEnterChat(currentUser())).toBe(true);
   });
+  it("accepts the reusable test login in a fresh browser without a demo button", () => {
+    expect(() => signIn("08012345678", "9999")).toThrow("Wrong phone number or PIN.");
+    expect(currentUser()).toBeNull();
+    signIn("08012345678", "1234");
+    expect(currentUser()?.name).toBe("Demo Customer");
+    expect(canEnterChat(currentUser())).toBe(true);
+  });
+  it("does not replace an existing customer's PIN or bypass their setup", () => {
+    signUp("Ada Okafor", "08012345678", "4321");
+    expect(() => signIn("08012345678", "1234")).toThrow("Wrong phone number or PIN.");
+    signIn("08012345678", "4321");
+    expect(currentUser()?.name).toBe("Ada Okafor");
+    expect(canEnterChat(currentUser())).toBe(false);
+  });
   it("requires older accounts without a completion record to finish setup", () => {
     localStorage.setItem("nella.users.v2", JSON.stringify([{ name: "Ada Okafor", phone: "8012345678", pin: "1234" }]));
     signIn("08012345678", "1234");

@@ -84,6 +84,12 @@ export function signUp(name: string, phoneRaw: string, pin: string) {
 
 export function signIn(phoneRaw: string, pin: string) {
   const phone = normalisePhone(phoneRaw);
+  // Only the fixed test credentials provision the ready demo account.
+  // Existing accounts, including their PIN and setup state, remain unchanged.
+  if (phone === DEMO_PHONE && pin === DEMO_PIN && !readUsers().some((user) => user.phone === phone)) {
+    seedDemoLogin();
+    return;
+  }
   const u = readUsers().find((x) => x.phone === phone);
   if (!u || u.pin !== pin) throw new Error("Wrong phone number or PIN.");
   setSession(u.phone);
