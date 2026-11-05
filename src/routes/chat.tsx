@@ -254,17 +254,13 @@ function ChatPage() {
       }
     }
     setChatChoices([]);
-    const requestedPanel = media ? null : panelForMessage(t);
+    const requestedPanel = panelForMessage(t);
     if (requestedPanel) {
       inputRef.current?.blur();
       setPanel(requestedPanel);
       return;
     }
-    nellaSays(
-      demoReply(
-        media?.kind === "audio" ? "Voice note" : media?.kind === "image" ? "I snapped a bill" : t,
-      ),
-    );
+    nellaSays(demoReply(t));
   };
 
   const runQuickAction = (action: QuickAction) => {
