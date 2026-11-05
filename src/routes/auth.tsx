@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Fingerprint, LockKeyhole, ShieldCheck, Check } from "lucide-react";
-import { currentUser, normalisePhone, resetDemoPin, signIn, signUp } from "@/lib/demo-store";
+import { currentUser, normalisePhone, resetDemoPin, signIn, signInVerified, signUp } from "@/lib/demo-store";
 import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiometrics } from "@/lib/biometrics";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
@@ -63,7 +63,10 @@ function AuthPage() {
       }
       if (mode === "up") {
         if (pin !== pin2) throw new Error("The two PINs don't match.");
-        signUp(name, phone, pin); navigate({ to: "/chat" });
+        signUp(name, phone, pin);
+        const phoneNumber = normalisePhone(phone);
+        if (phoneNumber && (await biometricsAvailable()) && !bioPhone) { setStep(3); return; }
+        navigate({ to: "/chat" });
       } else if (mode === "reset") {
         if (pin !== pin2) throw new Error("The two PINs don't match.");
         resetDemoPin(phone, pin); switchMode("in"); setSuccess("Your demo PIN has been reset in this browser. You can log in now.");
