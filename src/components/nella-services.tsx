@@ -14,11 +14,13 @@ const PROVIDERS: Record<MoneyService, string[]> = {
   electricity: ["Ikeja Electric", "Eko Electric", "Abuja Electric", "Ibadan Electric", "Other provider"], cable: ["DStv", "GOtv", "StarTimes"],
 };
 
+type SupportDraft = { category: string; reference: string; details: string };
 type DraftMap = Partial<Record<MoneyService, PaymentDraft>>;
 export function NellaServices({ panel, onChange, onBack, depth, user, previews, onPreview }: { panel: AppPanel | null; onChange: (panel: AppPanel | null) => void; onBack: () => void; depth: number; user: DemoUser; previews: ReceiptPreview[]; onPreview: (receipt: ReceiptPreview) => void }) {
   const [drafts, setDrafts] = useState<DraftMap>({});
+  const [support, setSupport] = useState<SupportDraft>({ category: "Transfer issue", reference: "", details: "" });
   const bodyRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { setDrafts({}); }, [user.phone]);
+  useEffect(() => { setDrafts({}); setSupport({ category: "Transfer issue", reference: "", details: "" }); }, [user.phone]);
   useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; }, [panel]);
   return <Dialog open={panel !== null} onOpenChange={open => { if (!open) onChange(null); }}>
     <DialogContent className="nella-sheet left-0 top-auto flex max-h-[calc(var(--app-height,100dvh)-1rem)] flex-col gap-0 overflow-hidden translate-x-0 translate-y-0 rounded-t-2xl p-0 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
@@ -28,19 +30,20 @@ export function NellaServices({ panel, onChange, onBack, depth, user, previews, 
         <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Close" onClick={() => onChange(null)}><X /></Button>
       </header>
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
-        <PanelBody panel={panel} onChange={onChange} user={user} previews={previews} onPreview={onPreview} drafts={drafts} setDrafts={setDrafts} />
+        <PanelBody panel={panel} onChange={onChange} user={user} previews={previews} onPreview={onPreview} drafts={drafts} setDrafts={setDrafts} support={support} setSupport={setSupport} />
       </div>
     </DialogContent>
   </Dialog>;
 }
 
-function PanelBody({ panel, onChange, user, previews, onPreview, drafts, setDrafts }: { panel: AppPanel | null; drafts: DraftMap; setDrafts: Dispatch<SetStateAction<DraftMap>>; onChange: (panel: AppPanel | null) => void; user: DemoUser; previews: ReceiptPreview[]; onPreview: (receipt: ReceiptPreview) => void }) {
-  const [supportCategory, setSupportCategory] = useState("Transfer issue");
-  const [reference, setReference] = useState("");
-  const [details, setDetails] = useState("");
+function PanelBody({ panel, onChange, user, previews, onPreview, drafts, setDrafts, support, setSupport }: { support: SupportDraft; setSupport: Dispatch<SetStateAction<SupportDraft>>; panel: AppPanel | null; drafts: DraftMap; setDrafts: Dispatch<SetStateAction<DraftMap>>; onChange: (panel: AppPanel | null) => void; user: DemoUser; previews: ReceiptPreview[]; onPreview: (receipt: ReceiptPreview) => void }) {
+  const { category: supportCategory, reference, details } = support;
+  const setSupportCategory = (category: string) => setSupport(previous => ({ ...previous, category }));
+  const setReference = (reference: string) => setSupport(previous => ({ ...previous, reference }));
+  const setDetails = (details: string) => setSupport(previous => ({ ...previous, details }));
   const [feedback, setFeedback] = useState("");
   const [securityStep, setSecurityStep] = useState("");
-  useEffect(() => { setSupportCategory("Transfer issue"); setReference(""); setDetails(""); setFeedback(""); setSecurityStep(""); }, [user.phone]);
+  useEffect(() => { setFeedback(""); setSecurityStep(""); }, [user.phone]);
   if (panel === null) return null;
   if (panel in SERVICE_LABELS) {
     const service = panel as MoneyService;
@@ -65,7 +68,7 @@ function PanelBody({ panel, onChange, user, previews, onPreview, drafts, setDraf
   if (panel === "scheduled") return <div className="space-y-5"><Empty icon={FileText} title="Automatic payments are not available" text="Personal recurring transfers are not supported by the current Nella service. Preparing a payment here will not schedule it." /><Info title="Business invoice reminders" text="The original business service supports invoice due-date and overdue reminders. These require an active business account and connected delivery service." /><Button variant="outline" className="h-12 w-full" onClick={() => onChange("business")}>Business reminders<ArrowRight /></Button></div>;
   if (panel === "security") return <div className="space-y-4"><Info title="Keep your PIN private" text="Nella must never ask for your payment PIN in the chat. This demo PIN is not a banking PIN." /><div className="divide-y divide-border">{["Change payment PIN", "Forgot payment PIN", "Freeze account", "Recover account"].map(label => <Action key={label} label={label} onClick={() => setSecurityStep(label)} />)}</div>{securityStep && <div role="status" className="border-t border-border pt-4"><h3 className="font-bold">{securityStep}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{securityStep.includes("PIN") ? "A secure private form and verified account are required. Your payment PIN cannot be changed here; the demo PIN reset remains on the login page." : "A verified banking connection and identity checks are required. No live account has been frozen or recovered."}</p><Button variant="outline" className="mt-3 h-11" onClick={() => onChange("support")}><CircleHelp />Get help</Button></div>}</div>;
   if (panel === "support") return <form className="space-y-4" onSubmit={event => { event.preventDefault(); setFeedback("Your support draft is ready below. It has not been sent; support delivery is not connected."); }}><Info title="Never share your PIN or OTP" text="Describe the issue and include a transaction reference when available." /><label className="block text-sm font-semibold">Issue<select className={FIELD} value={supportCategory} onChange={event => setSupportCategory(event.target.value)}>{["Transfer issue", "Airtime or data", "Bill payment", "Account opening", "Security concern", "Something else"].map(option => <option key={option}>{option}</option>)}</select></label><label className="block text-sm font-semibold">Transaction reference <span className="font-normal text-muted-foreground">(optional)</span><input maxLength={120} className={FIELD} value={reference} onChange={event => setReference(event.target.value)} placeholder="Reference from your receipt" /></label><label className="block text-sm font-semibold">What happened?<textarea required maxLength={1000} className={`${FIELD} h-28 py-3`} value={details} onChange={event => setDetails(event.target.value)} placeholder="Describe the problem without sensitive details" /></label><Button className="h-12 w-full" type="submit">Prepare support draft<FileText /></Button>{feedback && <div role="status" className="border-t border-border pt-4"><p className="text-sm text-muted-foreground">{feedback}</p><p className="mt-3 whitespace-pre-wrap break-words text-sm">{supportCategory}{reference ? ` · ${reference}` : ""}{"\n"}{details}</p></div>}</form>;
-  if (panel === "insights") return <div className="space-y-5"><Empty icon={FileText} title="No spending data yet" text="Income, spending categories, payment history and statements need verified account transactions." /><label className="block text-sm font-semibold">Statement period<select className={FIELD} type="number" min={1} max={365} defaultValue={90} aria-label="Statement period in days" /></label><p className="text-xs text-muted-foreground">1–365 days</p><label className="sr-only"></label><Button disabled className="h-12 w-full"><ArrowDownToLine />Statement unavailable</Button><Button variant="outline" className="h-12 w-full" onClick={() => onChange("activity")}><ReceiptText />View activity</Button></div>;
+  if (panel === "insights") return <div className="space-y-5"><Empty icon={FileText} title="No spending data yet" text="Income, spending categories, payment history and statements need verified account transactions." /><label className="block text-sm font-semibold">Statement period<input className={FIELD} type="number" min={1} max={365} defaultValue={90} aria-label="Statement period in days" /></label><p className="text-xs text-muted-foreground">1–365 days</p><Button disabled className="h-12 w-full"><ArrowDownToLine />Statement unavailable</Button><Button variant="outline" className="h-12 w-full" onClick={() => onChange("activity")}><ReceiptText />View activity</Button></div>;
   if (panel === "referrals") return <div className="space-y-5"><Empty icon={FileText} title="Your referral code is not available yet" text="An eligible connected account is required before issuing a referral code or recording referrals." /><Info title="Rewards are subject to activation" text="The original referral programme only rewards qualifying transactions when rewards are enabled. No reward amount or eligibility is promised in this demo." /><Button variant="outline" className="h-12 w-full" onClick={() => onChange("support")}>Ambassador enquiries<ArrowRight /></Button></div>;
   return <div className="space-y-4"><Info title="Business services" text="The original Nella product includes invoice, collection and bulk-payment flows. Business account access and approvals must be connected before using them here." />{["Create & track invoices", "Request & collect payments", "Payroll & bulk transfers", "Business spending & statements", "Staff roles & payment approvals", "Payment reminders"].map(label => <div key={label} className="flex items-center justify-between gap-3 border-b border-border py-3"><p className="text-sm font-semibold">{label}</p><span className="shrink-0 text-xs text-muted-foreground">Not connected</span></div>)}<Button variant="outline" className="h-12 w-full" onClick={() => onChange("support")}>Business account help<ArrowRight /></Button></div>;
 }
