@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Keep existing demo-account and banking behavior during presentation refinements; UI completion must not imply verified live banking.
+- Keep chat in a fixed visual-viewport shell that tracks height and offset, locks document scrolling only while mounted, and scrolls only the conversation; this prevents mobile keyboard panning from displacing the composer.
 - Compose welcome and chat identity from the shared Nella mascot component, and use design-system buttons for all updated controls.
 - Keep new-customer setup inside the public entry page with progressive steps, then navigate directly to chat; this preserves the minimal navigation model.
 - Collect payment details through the shared conversational payment state machine and chat composer, never payment-entry sheets; preserve the existing complete-message parser and keep previews distinct from verified transactions. Non-payment account views remain shared sheets.

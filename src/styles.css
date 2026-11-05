@@ -114,7 +114,11 @@
 
 .nella-mascot { animation: nella-hello 3.8s ease-in-out infinite; transform-origin: bottom center; }
 @keyframes nella-hello { 0%, 100% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-5px) rotate(-3deg); } 65% { transform: translateY(-3px) rotate(2deg); } }
-.chat-surface { background: var(--background); }
+.chat-surface { background: var(--background); position: fixed; top: var(--app-top, 0px); left: 0; right: 0; }
+html[data-chat-open], html[data-chat-open] body { overflow: hidden; overscroll-behavior: none; }
+html[data-chat-keyboard] .chat-composer { padding-bottom: 0.5rem; }
+html[data-chat-keyboard] .chat-surface > header { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+html[data-chat-keyboard] .chat-welcome-mascot { width: 5rem; height: 5rem; }
 .auth-surface { background: var(--background); }
 .step-enter { animation: step-enter 240ms ease-out; }
 @keyframes step-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -129,5 +133,12 @@
 @media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter, .splash-orb, .splash-dot, .splash-leave, .animate-bounce, .animate-pulse { animation: none; } }
 .nella-sheet > button:last-child { display: none; }
 .nella-profile > button:last-child { position: sticky; bottom: 0; margin-left: auto; background: var(--card); }
-.nella-sheet { bottom: max(0px, calc(100dvh - var(--app-height,100dvh))); }
-@media (min-width: 640px) { .nella-sheet { top: calc(var(--app-height,100dvh) / 2); bottom: auto; } }
+.nella-sheet, .nella-profile, .nella-approval {
+  bottom: max(0px, calc(100% - var(--app-top, 0px) - var(--app-height, 100dvh)));
+  max-height: calc(var(--app-height, 100dvh) - 1rem);
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+html[data-chat-keyboard] .nella-profile, html[data-chat-keyboard] .nella-approval { padding-bottom: 1rem; }
+@media (min-width: 640px) {
+  .nella-sheet, .nella-profile, .nella-approval { top: calc(var(--app-top, 0px) + var(--app-height, 100dvh) / 2); bottom: auto; }
+}
