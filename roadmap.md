@@ -1,5 +1,5 @@
 # Nella WhatsApp-to-app coverage
-- [ ] Add private four-digit demo PIN approval for the active chat payment, with review, invalid-PIN feedback, cancellation and no live submission; verify tests and mobile flow.
+- [x] Add private four-digit demo PIN approval for the active chat payment, with review, invalid-PIN feedback, cancellation and no live submission; verified mobile signup-to-approval flow and all 39 tests.
 - [x] Support natural payment requests, bank aliases and “for me” phone targeting while asking only for missing details; verified all three requested examples after signup on mobile, with 36 tests passing. Live payments remain deferred.
 - [x] Add in-app snap-to-pay camera with pinch/slider zoom (native lens zoom when supported, digital crop otherwise), review/retake, and native-camera fallback; verified in mobile browser flow.
 - [x] Replace payment-entry sheets with progressive chat conversations, in-chat edits/cancellation, photo/voice fallback and preview reuse; tests and mobile browser flow verified. Transcription, photo extraction and live payments remain unconnected.
