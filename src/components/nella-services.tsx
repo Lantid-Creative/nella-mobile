@@ -17,7 +17,7 @@ const PROVIDERS: Record<MoneyService, string[]> = {
 export function NellaServices({ panel, onChange, user, previews, onPreview }: { panel: AppPanel | null; onChange: (panel: AppPanel | null) => void; user: DemoUser; previews: ReceiptPreview[]; onPreview: (receipt: ReceiptPreview) => void }) {
   return <Dialog open={panel !== null} onOpenChange={open => { if (!open) onChange(null); }}>
     <DialogContent className="bottom-0 left-0 top-auto max-h-[90dvh] overflow-y-auto overscroll-contain translate-x-0 translate-y-0 rounded-t-2xl px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
-      <DialogTitle className="sticky -top-6 z-10 bg-background pb-3 pr-7 pt-2">{panel ? TITLES[panel] : "Nella"}</DialogTitle>
+      <DialogTitle className="pointer-events-none sticky -top-6 z-10 bg-background pb-3 pr-7 pt-2">{panel ? TITLES[panel] : "Nella"}</DialogTitle>
       <DialogDescription>Preview account · Live banking is not connected.</DialogDescription>
       {panel && <PanelBody key={panel} panel={panel} onChange={onChange} user={user} previews={previews} onPreview={onPreview} />}
     </DialogContent>
