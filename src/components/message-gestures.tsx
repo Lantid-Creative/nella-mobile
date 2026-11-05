@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode, type PointerEvent } from "react";
-import { Reply } from "lucide-react";
+import { Copy, Reply } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const REACTIONS = ["👍", "❤️", "😂", "🙏", "😮"] as const;
@@ -17,6 +17,7 @@ export function quoteText(text: string | undefined, max = 90) {
 
 type Props = {
   mine: boolean;
+  copyText?: string | undefined;
   reactions?: string[] | undefined;
   onReply: () => void;
   onReact: (emoji: string) => void;
@@ -24,7 +25,7 @@ type Props = {
 };
 
 /** Swipe right to reply; long-press (or the menu button) to react. */
-export function MessageGestures({ mine, reactions, onReply, onReact, children }: Props) {
+export function MessageGestures({ mine, copyText, reactions, onReply, onReact, children }: Props) {
   const [dx, setDx] = useState(0);
   const [menu, setMenu] = useState(false);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -75,6 +76,7 @@ export function MessageGestures({ mine, reactions, onReply, onReact, children }:
             <Button key={r} role="menuitem" variant={reactions?.includes(r) ? "secondary" : "ghost"} size="none" aria-label={`React ${r}`} className="h-11 w-11 rounded-full text-xl" onClick={() => { onReact(r); setMenu(false); }}>{r}</Button>
           ))}
           <Button role="menuitem" variant="ghost" size="none" className="h-11 rounded-full px-3 text-sm font-semibold" onClick={() => { onReply(); setMenu(false); }}><Reply className="mr-1 h-4 w-4" />Reply</Button>
+          {copyText && <Button role="menuitem" variant="ghost" size="none" className="h-11 rounded-full px-3 text-sm font-semibold" onClick={() => { void navigator.clipboard?.writeText(copyText).catch(() => undefined); setMenu(false); }}><Copy className="mr-1 h-4 w-4" />Copy</Button>}
           <Button role="menuitem" variant="ghost" size="none" aria-label="Close" className="h-11 rounded-full px-3 text-sm text-muted-foreground" onClick={() => setMenu(false)}>✕</Button>
         </div>
       )}

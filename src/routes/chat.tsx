@@ -38,6 +38,7 @@ import {
 } from "@/lib/demo-store";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
+import { dayLabel, filterChoices, greeting, groupInfo, haptic, paymentSteps } from "@/lib/chat-ux";
 import { MessageGestures, quoteText, toggleReaction } from "@/components/message-gestures";
 import { NellaCamera } from "@/components/nella-camera";
 import { PaymentApproval } from "@/components/payment-approval";
@@ -114,6 +115,10 @@ function ChatPage() {
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
+  const [choiceQuery, setChoiceQuery] = useState("");
+  const [offline, setOffline] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [swipeTip, setSwipeTip] = useState(false);
   const reply = usePendingReply();
   const typing = reply.pending;
   const [menu, setMenu] = useState(false);
@@ -170,9 +175,12 @@ function ChatPage() {
   useEffect(() => {
     const warning = () => setNotice(STORAGE_NOTICE);
     window.addEventListener("nella-storage-warning", warning);
-    const connection = () => { if (!navigator.onLine) setNotice("You’re offline. No payment requests will be sent."); };
+    const connection = () => setOffline(!navigator.onLine);
+    connection();
     window.addEventListener("offline", connection);
-    return () => { window.removeEventListener("nella-storage-warning", warning); window.removeEventListener("offline", connection); };
+    window.addEventListener("online", connection);
+    try { setSwipeTip(!localStorage.getItem("nella.tip.swipe")); } catch { /* storage unavailable */ }
+    return () => { window.removeEventListener("nella-storage-warning", warning); window.removeEventListener("offline", connection); window.removeEventListener("online", connection); };
   }, []);
 
   useEffect(() => {
@@ -239,6 +247,8 @@ function ChatPage() {
       { id: uid(), role: "user", text: t, ...(media ? { media } : {}), ...(replyingTo ? { replyTo: { id: replyingTo.id, role: replyingTo.role, text: quoteText(replyingTo.text ?? replyingTo.media?.label) } } : {}), at: Date.now() },
     ]);
     setReplyingTo(null);
+    setChoiceQuery("");
+    haptic();
     setText("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     if (media) {
@@ -456,6 +466,7 @@ function ChatPage() {
           onClick={() => {
             setMenu((m) => !m);
             setConfirmClear(false);
+            setConfirmLogout(false);
           }}
           aria-label="Profile"
           aria-expanded={menu}
@@ -546,16 +557,16 @@ function ChatPage() {
                 onClick={() => setConfirmClear(true)}
               />
             )}
-            <Button variant="plain" size="none"
+            {!confirmLogout ? <ProfileAction icon={LogOut} label="Log out" onClick={() => setConfirmLogout(true)} /> : <div className="mt-2 rounded-xl bg-muted p-3"><p className="text-sm font-semibold">Log out of Nella?</p><p className="mt-1 text-xs text-muted-foreground">You can log back in with your PIN or biometrics.</p><div className="mt-2 flex gap-2"><Button variant="outline" className="h-11 flex-1" onClick={() => setConfirmLogout(false)}>Stay</Button>
+            <Button variant="destructive" className="h-11 flex-1"
               onClick={() => {
                 reply.cancel();
                 if (!signOut()) { setNotice(STORAGE_NOTICE); return; }
                 navigate({ to: "/auth", replace: true });
               }}
-              className="flex min-h-11 w-full items-center justify-start gap-3 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
             >
-              <LogOut className="h-4 w-4" /> Log out
-            </Button>
+              Log out
+            </Button></div></div>}
           </DialogContent>
         </Dialog>
       </header>
@@ -570,7 +581,7 @@ function ChatPage() {
           <div className="flex min-h-full flex-col items-center justify-center pb-4 pt-5 text-center">
             <NellaMascot className="chat-welcome-mascot mb-3 h-36 w-36 shrink-0" />
             <span className="mb-3 rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-primary">YOUR MONEY, IN A CHAT</span>
-            <h1 className="text-2xl font-extrabold">Hi, {first} <span aria-hidden="true">👋</span></h1>
+            <h1 className="text-2xl font-extrabold">{greeting()}, {first} <span aria-hidden="true">👋</span></h1>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">I'm Nella. What can I help you with today?</p>
             <section aria-label="Payment actions" className="mt-6 w-full max-w-sm">
               <div className="grid grid-cols-2 gap-2.5">
@@ -584,17 +595,18 @@ function ChatPage() {
           </div>
         ) : (
           <div role="log" aria-label="Conversation with Nella" aria-live="polite" className="space-y-5 py-5">
-            <p className="text-center text-[11px] text-muted-foreground">Today · Preview conversation</p>
+            {swipeTip && <div className="flex items-center justify-between gap-2 rounded-2xl bg-secondary px-4 py-2 text-xs text-secondary-foreground"><span>Tip: swipe a message right to reply, or press and hold to react.</span><Button variant="ghost" size="none" className="h-11 px-3 text-xs font-semibold" onClick={() => { setSwipeTip(false); try { localStorage.setItem("nella.tip.swipe", "1"); } catch { /* ignore */ } }}>Got it</Button></div>}
             {msgs.length > visibleCount && <Button variant="outline" className="h-11 w-full" onClick={() => { const element = scrollRef.current; const height = element?.scrollHeight ?? 0; const top = element?.scrollTop ?? 0; followsBottom.current = false; setVisibleCount(count => count + 40); requestAnimationFrame(() => { if (element) element.scrollTop = top + element.scrollHeight - height; }); }}>Earlier messages</Button>}
-            {msgs.slice(-visibleCount).map((m) => (
+            {msgs.slice(-visibleCount).map((m, index, shown) => { const g = groupInfo(shown, index); return (
+              <div key={m.id} className={g.firstInGroup ? "" : "-mt-4"}>
+              {g.newDay && <p className="mb-4 text-center"><span className="rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">{dayLabel(m.at)}</span></p>}
               <div
-                key={m.id}
                 id={`msg-${m.id}`}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`message-enter flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {m.role === "nella" && <NellaMascot small className="mr-2 h-7 w-7" />}
+                {m.role === "nella" && (g.lastInGroup ? <NellaMascot small className="mr-2 h-7 w-7 self-end" /> : <span className="mr-2 w-7 shrink-0" aria-hidden />)}
                 <div className="min-w-0 max-w-[85%]">
-                <MessageGestures mine={m.role === "user"} reactions={m.reactions} onReply={() => { setReplyingTo(m); inputRef.current?.focus(); }} onReact={(emoji) => patch(m.id, (x) => ({ ...x, reactions: toggleReaction(x.reactions, emoji) }))}>
+                <MessageGestures copyText={m.text} mine={m.role === "user"} reactions={m.reactions} onReply={() => { setReplyingTo(m); inputRef.current?.focus(); }} onReact={(emoji) => patch(m.id, (x) => ({ ...x, reactions: toggleReaction(x.reactions, emoji) }))}>
                 <div className="space-y-2">
                   {m.replyTo && (
                     <Button variant="plain" size="none" onClick={() => document.getElementById(`msg-${m.replyTo!.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })} className={`block h-auto w-full whitespace-normal rounded-xl border-l-4 border-primary bg-muted px-3 py-2 text-left text-xs text-muted-foreground`}>
@@ -747,10 +759,11 @@ function ChatPage() {
                   )}
                 </div>
                 </MessageGestures>
-                  <p className={`text-[10px] text-muted-foreground ${m.role === "user" ? "text-right" : ""}`}>{new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                  {g.lastInGroup && <p className={`text-[10px] text-muted-foreground ${m.role === "user" ? "text-right" : ""}`}>{new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>}
                 </div>
               </div>
-            ))}
+              </div>
+            ); })}
             {typing && (
               <div role="status" aria-label="Nella is replying" className="flex items-center gap-2">
                 <NellaMascot small className="h-7 w-7" />
@@ -769,8 +782,10 @@ function ChatPage() {
               chatChoices.length > 4 ? (
                 <div className="glass ml-9 flex max-w-xs flex-col overflow-hidden rounded-2xl" role="listbox" aria-label="Choose an option">
                   <p className="border-b border-border/60 px-4 py-2 text-xs font-medium text-muted-foreground">Tap to choose</p>
+                  {chatChoices.length > 8 && <input value={choiceQuery} onChange={(e) => setChoiceQuery(e.target.value)} placeholder="Search" aria-label="Search options" className="h-11 border-b border-border/60 bg-transparent px-4 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring" />}
                   <div className="max-h-72 overflow-y-auto">
-                    {chatChoices.map(choice => (
+                    {filterChoices(chatChoices, choiceQuery).length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">No match. Type it in the chat instead.</p>}
+                    {filterChoices(chatChoices, choiceQuery).map(choice => (
                       <Button variant="plain" size="none" key={choice} type="button" role="option" aria-selected="false" className="flex min-h-11 w-full items-center justify-between gap-2 whitespace-normal border-b border-border/40 px-4 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent/50 active:bg-accent" onClick={() => send(choice)}>
                         <span className="min-w-0 flex-1">{choice}</span>
                         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -889,6 +904,15 @@ function ChatPage() {
                 Send voice note
               </Button>
             </div>
+          </div>
+        )}
+        {offline && <p role="status" className="mb-2 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-foreground">You’re offline. Messages will send when you reconnect; no payment requests are sent.</p>}
+        {payment && (
+          <div className="mb-2 flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
+            <ol aria-label="Payment progress" className="flex min-w-0 flex-1 gap-1 overflow-x-auto text-[11px]">
+              {paymentSteps(payment).map((step) => <li key={step.key} aria-current={step.current ? "step" : undefined} className={`shrink-0 rounded-full px-2 py-1 font-semibold ${step.current ? "bg-primary text-primary-foreground" : step.done ? "bg-secondary text-primary" : "bg-muted text-muted-foreground"}`}>{step.done ? "✓ " : ""}{step.label}</li>)}
+            </ol>
+            <Button variant="ghost" size="none" type="button" className="h-11 shrink-0 px-3 text-xs font-semibold text-destructive" onClick={() => { reply.cancel(); setPayment(null); setChatChoices([]); commit([...msgsRef.current, { id: uid(), role: "nella", text: "Payment cancelled. Nothing was sent.", at: Date.now() }]); }}>Cancel</Button>
           </div>
         )}
         {replyingTo && (

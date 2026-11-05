@@ -142,3 +142,9 @@ html[data-chat-keyboard] .nella-profile, html[data-chat-keyboard] .nella-approva
 @media (min-width: 640px) {
   .nella-sheet, .nella-profile, .nella-approval { top: calc(var(--app-top, 0px) + var(--app-height, 100dvh) / 2); bottom: auto; }
 }
+
+@keyframes message-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pin-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.message-enter { animation: message-in 220ms ease-out both; }
+.pin-shake { animation: pin-shake 260ms ease-in-out 2; }
+@media (prefers-reduced-motion: reduce) { .message-enter, .pin-shake { animation: none; } }
