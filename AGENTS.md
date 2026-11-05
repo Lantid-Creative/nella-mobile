@@ -22,4 +22,4 @@
 - `/` is the branded splash that routes to `/auth` or `/chat`; sign-out and entry links point at `/auth`, never back to the splash.
 - Biometric unlock uses the WebAuthn platform authenticator via the shared biometrics module and covers whatever the device offers (fingerprint, face, iris, pattern) — wording always says "biometrics"/"device unlock", never fingerprint only; it only opens the demo session on this device, never replaces the payment PIN, and always keeps PIN login as the fallback.
 
-- Gate splash, login, biometric entry and chat through shared demo onboarding completion; incomplete or legacy accounts resume setup at /auth so navigation cannot skip it. This is not live verification.
+- Gate splash, login, biometric entry and chat through both demo onboarding and KYC-setup completion; incomplete or legacy accounts resume progressive KYC at /auth so navigation cannot skip it. Use sample identity/address details until secure provider verification is connected, never label demo completion as verified KYC.

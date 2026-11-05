@@ -1,17 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ScanFace, LockKeyhole, ShieldCheck, Check } from "lucide-react";
-import { canEnterChat, completeOnboarding, currentUser, normalisePhone, resetDemoPin, signIn, signInVerified, signUp } from "@/lib/demo-store";
+import { canEnterChat, completeDemoKyc, completeOnboarding, currentUser, normalisePhone, resetDemoPin, signIn, signInVerified, signUp } from "@/lib/demo-store";
 import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiometrics } from "@/lib/biometrics";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
+import { KycSetup } from "@/components/kyc-setup";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [
     { title: "Nella — Log in or get started" },
-    { name: "description", content: "Log in to Nella or set up your account in a few friendly steps, then go straight to chat." },
+    { name: "description", content: "Log in to Nella or complete guided signup and required demo KYC setup before entering chat." },
     { property: "og:title", content: "Nella — Log in or get started" },
-    { property: "og:description", content: "A friendly, chat-first money experience with guided account setup." },
+    { property: "og:description", content: "A friendly, chat-first money experience with guided signup and required demo KYC setup." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary_large_image" },
   ] }), component: AuthPage,
@@ -54,6 +55,14 @@ function AuthPage() {
     try { completeOnboarding(); navigate({ to: "/chat", replace: true }); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not save your setup. Try again."); }
   };
+  const finishKyc = async () => {
+    setError("");
+    try {
+      completeDemoKyc();
+      if ((await biometricsAvailable()) && !bioPhone) { setStep(4); return; }
+      finishSetup();
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not save your KYC setup. Try again."); }
+  };
   const setupBiometrics = async () => {
     setBioBusy(true); setError("");
     try {
@@ -75,8 +84,7 @@ function AuthPage() {
         setStep(2); return;
       }
       if (mode === "up" && step === 3) {
-        if ((await biometricsAvailable()) && !bioPhone) { setStep(4); return; }
-        finishSetup(); return;
+        return;
       }
       if (mode === "up") {
         if (pin !== pin2) throw new Error("The two PINs don't match.");
@@ -101,7 +109,7 @@ function AuthPage() {
         </header>
         {mode === "up" && <div aria-label={`Setup step ${Math.min(step, 3) + 1} of 4`} className="mt-4 flex gap-2">{[0,1,2,3].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-border"}`} />)}</div>}
         <div key={`${mode}-${step}`} className="step-enter flex flex-1 flex-col justify-center py-5">
-          {mode === "up" && step === 4 ? <div className="flex flex-1 flex-col justify-center">
+          {mode === "up" && step === 3 ? <KycSetup name={name} phone={normalisePhone(phone) ?? phone} error={error} onComplete={() => void finishKyc()} /> : mode === "up" && step === 4 ? <div className="flex flex-1 flex-col justify-center">
             <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-secondary"><ScanFace className="h-14 w-14 text-primary" /></div>
             <h1 className="mt-6 text-[28px] font-extrabold leading-tight">Unlock with biometrics.</h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Next time you open Nella, use your phone's own unlock method — fingerprint, face or pattern — instead of your PIN. Your payment PIN stays separate and is never replaced.</p>
@@ -118,11 +126,8 @@ function AuthPage() {
           <h1 className="text-[28px] font-extrabold leading-tight">{title}</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
           <form onSubmit={submit} className="mt-7 space-y-5">
-            {mode === "up" && step === 3 ? <div className="space-y-5">
-              <dl className="divide-y divide-border text-sm">{[["Full name", name], ["Phone number", `+234 ${normalisePhone(phone) ?? phone}`], ["Demo PIN", "Created"]].map(([label, value]) => <div key={label} className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">{label}</dt><dd className="min-w-0 break-words text-right font-semibold">{value}</dd></div>)}</dl>
-              <div className="border-l-2 border-primary pl-4"><p className="flex items-center gap-2 text-sm font-bold"><ShieldCheck className="h-5 w-5 text-primary" />Live account verification</p><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Not connected yet. Your demo setup does not open a bank account or enable real payments. Do not provide NIN, BVN, identity documents or your banking PIN here.</p></div>
-            </div> : mode === "up" && step === 0 ? <div className="space-y-5">
-              {[['01', 'A little about you', 'Your name and phone number.'], ['02', 'Your private PIN', 'A test PIN for this demo.'], ['03', 'Finish your setup', 'Review your details before entering chat.']].map(([n,t,d]) => <div key={n} className="flex items-center gap-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-primary">{n}</span><div><p className="text-sm font-bold">{t}</p><p className="mt-0.5 text-xs text-muted-foreground">{d}</p></div></div>)}
+            {mode === "up" && step === 0 ? <div className="space-y-5">
+              {[['01', 'A little about you', 'Your name and phone number.'], ['02', 'Your private PIN', 'A test PIN for this demo.'], ['03', 'Required KYC setup', 'Review your identity and sample address before chat.']].map(([n,t,d]) => <div key={n} className="flex items-center gap-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-primary">{n}</span><div><p className="text-sm font-bold">{t}</p><p className="mt-0.5 text-xs text-muted-foreground">{d}</p></div></div>)}
               <div className="border-t border-border pt-4"><p className="flex items-center gap-2 text-xs font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> When live account opening is available</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">You'll verify your NIN, BVN, date of birth and home address in a secure form. Don't send these details in chat. Identity verification isn't connected yet.</p></div>
             </div> : <>
               {mode === "up" && step === 1 && <label className="block space-y-2"><span className="text-sm font-semibold">Full name</span><input autoFocus className={field} required autoComplete="name" placeholder="First and last name" value={name} onChange={e => setName(e.target.value)} /></label>}

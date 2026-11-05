@@ -3,6 +3,7 @@ import {
   currentUser,
   canEnterChat,
   completeOnboarding,
+  completeDemoKyc,
   demoReply,
   loadChat,
   resetDemoPin,
@@ -27,6 +28,9 @@ describe("demo preview account and chat", () => {
     expect(canEnterChat(currentUser())).toBe(false);
     signIn("08012345678", "1234");
     expect(canEnterChat(currentUser())).toBe(false);
+    expect(() => completeOnboarding()).toThrow("Complete KYC setup before entering chat.");
+    completeDemoKyc();
+    expect(canEnterChat(currentUser())).toBe(false);
     completeOnboarding();
     expect(canEnterChat(currentUser())).toBe(true);
     signIn("08012345678", "1234");
@@ -37,8 +41,24 @@ describe("demo preview account and chat", () => {
     signIn("08012345678", "1234");
     expect(canEnterChat(currentUser())).toBe(false);
   });
+  it("blocks previously onboarded accounts that have not completed KYC, including device-unlocked entry", () => {
+    localStorage.setItem("nella.users.v2", JSON.stringify([{ name: "Ada Okafor", phone: "8012345678", pin: "1234", onboardingComplete: true }]));
+    signIn("08012345678", "1234");
+    expect(canEnterChat(currentUser())).toBe(false);
+    completeDemoKyc();
+    expect(canEnterChat(currentUser())).toBe(true);
+  });
+  it("does not complete KYC when its checkpoint cannot be saved", () => {
+    signUp("Ada Okafor", "08012345678", "1234");
+    const store = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    expect(() => completeDemoKyc()).toThrow();
+    store.mockRestore();
+    expect(currentUser()?.kycSetupComplete).toBe(false);
+    expect(canEnterChat(currentUser())).toBe(false);
+  });
   it("does not mark onboarding complete when the browser cannot save it", () => {
     signUp("Ada Okafor", "08012345678", "1234");
+    completeDemoKyc();
     const store = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
     expect(() => completeOnboarding()).toThrow();
     store.mockRestore();
