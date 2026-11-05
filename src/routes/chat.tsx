@@ -48,6 +48,7 @@ import { useServiceNavigation } from "@/hooks/use-service-navigation";
 import { STORAGE_NOTICE } from "@/lib/demo-storage";
 import { answerPayment, startPayment, paymentService, type PaymentConversation } from "@/lib/chat-payments";
 import { SERVICE_LABELS, type PaymentDraft } from "@/lib/app-provisions";
+import nellaLogo from "@/assets/nella-nav-logo.png.asset.json";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -455,7 +456,7 @@ function ChatPage() {
         nellaSays([{ text: "Demo PIN checked. No payment was submitted and no money moved. Live payment approval is not connected yet." }], 300);
       }} />}
       <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <div className="flex min-w-0 items-center gap-3"><NellaMascot small /><div className="min-w-0"><p className="text-lg font-extrabold text-primary">nella<span className="text-foreground">.</span></p><p className="text-[11px] text-muted-foreground">Your money companion</p></div></div>
+        <img src={nellaLogo.url} alt="Nella" width={697} height={178} className="h-7 w-auto shrink-0" />
         <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground" aria-label="Notifications" title="Notifications" onClick={() => setPanel("notifications")}><Bell /></Button>
         <Button variant="plain" size="none"
           onClick={() => {
