@@ -1,4 +1,5 @@
 # Nella WhatsApp-to-app coverage
+- [ ] Support natural payment requests, bank aliases and “for me” phone targeting while asking only for missing details; verify chat flows and parser tests.
 - [x] Add in-app snap-to-pay camera with pinch/slider zoom (native lens zoom when supported, digital crop otherwise), review/retake, and native-camera fallback; verified in mobile browser flow.
 - [x] Replace payment-entry sheets with progressive chat conversations, in-chat edits/cancellation, photo/voice fallback and preview reuse; tests and mobile browser flow verified. Transcription, photo extraction and live payments remain unconnected.
 - [x] Continue frontend-only mobile building: guided payment steps, searchable preview activity, preview details/share/reuse, and mobile regression checks; all 24 tests passed, live connections deferred.
