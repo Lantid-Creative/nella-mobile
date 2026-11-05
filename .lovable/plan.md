@@ -4,7 +4,7 @@
 
 A genuine mobile-first Nella money companion—not a generic AI chatbot. Customers log in or complete progressive onboarding, then go directly into chat. Keep Nella’s blue identity, Plus Jakarta Sans and friendly mascot. The top-right profile remains the home for account controls; avoid a crowded menu system or permanent dashboard navigation.
 
-**Current position:** the app is a browser-local demonstration. Payment preparation, mobile service sheets and local preview downloads exist. Live login, bank accounts, identity checks, transactions, notifications, real receipts and delivered support are not connected. The original Nella repository contains many of these execution paths, but source inspection does not verify that they are currently operating in production.
+**Current position:** browser-local demo with payment preparation and preview downloads, not connected banking. Live authentication, identity checks, payments, alerts, receipts and support remain absent. The original repository contains execution paths; their production operation is unverified.
 
 ## Priority 0 — Safe, working foundation
 
@@ -51,14 +51,7 @@ These are source findings; keyboard/overflow risks still require device testing.
 
 ## Mobile design rules
 
-- Composer above keyboard; safe areas, notches and home indicators respected.
-- Stable titles/back/close/actions, no overlapping sheets or unexpected discarded work.
-- Clear pending/error/empty/offline states with a useful next action.
-- Verified recipient, amount, fees and total always visible before authorization.
-- Context-aware greeting/actions for new accounts, pending setup, returning conversations and unfinished payments.
-- Nella mascot remains warm and restrained, never distracting from approval.
-- Screen-reader labels, contrast, non-color status cues, focus return and enlarged text must work.
-- Clearing chat must not remove financial records; unknown payments must survive reopening.
+Keep the composer above the keyboard; respect safe areas. Use stable back/close/actions, contextual greetings, clear unavailable/error states and verified recipient/fee details. Keep mascot motion restrained. Support screen readers, large text, contrast and non-color cues. Clearing chat must not erase financial records; pending payments must survive reopening.
 
 ## Priority 2 — Optimize performance and resilience
 
