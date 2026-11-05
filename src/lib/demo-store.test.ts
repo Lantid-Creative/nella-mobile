@@ -8,6 +8,9 @@ import {
   loadChat,
   resetDemoPin,
   saveChat,
+  seedDemoLogin,
+  DEMO_PHONE,
+  DEMO_PIN,
   signIn,
   signUp,
 } from "./demo-store";
