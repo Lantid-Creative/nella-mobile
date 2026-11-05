@@ -34,6 +34,8 @@ export type ChatMsg = {
   text?: string | undefined;
   card?: Card | undefined;
   media?: ChatMedia | undefined;
+  replyTo?: { id: string; role: "user" | "nella"; text: string } | undefined;
+  reactions?: string[] | undefined;
   at: number;
 };
 
@@ -48,6 +50,8 @@ const messageSchema = z.object({
   id: z.string(), role: z.enum(["user", "nella"]), text: z.string().optional(), at: z.number().finite(),
   card: z.union([approvalSchema, z.object({ kind: z.literal("preview"), preview: receiptSchema }), z.object({ kind: z.literal("balance"), amount: z.string() }), z.object({ kind: z.literal("narration"), pending: approvalSchema, done: z.boolean().optional() }), receiptSchema.extend({ kind: z.literal("receipt") })]).optional(),
   media: z.object({ kind: z.enum(["image", "audio"]), label: z.string(), previewUrl: z.string().optional(), durationSeconds: z.number().finite().optional() }).optional(),
+  replyTo: z.object({ id: z.string(), role: z.enum(["user", "nella"]), text: z.string().max(200) }).optional(),
+  reactions: z.array(z.string().max(8)).max(5).optional(),
 });
 const readUsers = (): DemoUser[] => {
   const raw = readDemoValue(USERS);

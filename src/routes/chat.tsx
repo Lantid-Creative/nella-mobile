@@ -38,6 +38,7 @@ import {
 } from "@/lib/demo-store";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
+import { MessageGestures, quoteText, toggleReaction } from "@/components/message-gestures";
 import { NellaCamera } from "@/components/nella-camera";
 import { PaymentApproval } from "@/components/payment-approval";
 import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
@@ -112,6 +113,7 @@ function ChatPage() {
   const [user, setUser] = useState<DemoUser | null>(null);
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const reply = usePendingReply();
   const typing = reply.pending;
   const [menu, setMenu] = useState(false);
@@ -234,8 +236,9 @@ function ChatPage() {
     followsBottom.current = true;
     commit([
       ...msgsRef.current,
-      { id: uid(), role: "user", text: t, ...(media ? { media } : {}), at: Date.now() },
+      { id: uid(), role: "user", text: t, ...(media ? { media } : {}), ...(replyingTo ? { replyTo: { id: replyingTo.id, role: replyingTo.role, text: quoteText(replyingTo.text ?? replyingTo.media?.label) } } : {}), at: Date.now() },
     ]);
+    setReplyingTo(null);
     setText("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     if (media) {
@@ -526,6 +529,7 @@ function ChatPage() {
                       setPayment(null);
                       setChatChoices([]);
                       commit([]);
+                      setReplyingTo(null);
                       setConfirmClear(false);
                       setMenu(false);
                     }}
@@ -585,10 +589,19 @@ function ChatPage() {
             {msgs.slice(-visibleCount).map((m) => (
               <div
                 key={m.id}
+                id={`msg-${m.id}`}
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {m.role === "nella" && <NellaMascot small className="mr-2 h-7 w-7" />}
-                <div className="min-w-0 max-w-[85%] space-y-2">
+                <div className="min-w-0 max-w-[85%]">
+                <MessageGestures mine={m.role === "user"} reactions={m.reactions} onReply={() => { setReplyingTo(m); inputRef.current?.focus(); }} onReact={(emoji) => patch(m.id, (x) => ({ ...x, reactions: toggleReaction(x.reactions, emoji) }))}>
+                <div className="space-y-2">
+                  {m.replyTo && (
+                    <Button variant="plain" size="none" onClick={() => document.getElementById(`msg-${m.replyTo!.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })} className={`block h-auto w-full whitespace-normal rounded-xl border-l-4 border-primary bg-muted px-3 py-2 text-left text-xs text-muted-foreground`}>
+                      <span className="block font-semibold text-foreground">{m.replyTo.role === "user" ? "You" : "Nella"}</span>
+                      <span className="line-clamp-2 break-words">{m.replyTo.text}</span>
+                    </Button>
+                  )}
                   {m.media?.kind === "image" && (
                     <div className="glass overflow-hidden rounded-[20px] border border-border p-2">
                       {m.media.previewUrl ? (
@@ -732,6 +745,8 @@ function ChatPage() {
                       </p>
                     </div>
                   )}
+                </div>
+                </MessageGestures>
                   <p className={`text-[10px] text-muted-foreground ${m.role === "user" ? "text-right" : ""}`}>{new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
               </div>
@@ -874,6 +889,15 @@ function ChatPage() {
                 Send voice note
               </Button>
             </div>
+          </div>
+        )}
+        {replyingTo && (
+          <div className="mb-2 flex items-center gap-2 rounded-2xl border-l-4 border-primary bg-muted px-3 py-2">
+            <div className="min-w-0 flex-1 text-xs">
+              <p className="font-semibold text-foreground">Replying to {replyingTo.role === "user" ? "yourself" : "Nella"}</p>
+              <p className="truncate text-muted-foreground">{quoteText(replyingTo.text ?? replyingTo.media?.label)}</p>
+            </div>
+            <Button variant="ghost" size="none" type="button" aria-label="Cancel reply" onClick={() => setReplyingTo(null)} className="h-11 w-11 rounded-full"><X className="h-4 w-4" /></Button>
           </div>
         )}
         {notice && (
