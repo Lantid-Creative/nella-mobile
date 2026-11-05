@@ -756,7 +756,23 @@ function ChatPage() {
                 </div>
               </div>
             )}
-            {!typing && chatChoices.length > 0 && <div className="flex flex-wrap gap-2 pl-9" aria-label="Chat replies">{chatChoices.map(choice => <Button key={choice} variant="outline" className="min-h-11 max-w-full whitespace-normal" onClick={() => send(choice)}>{choice}</Button>)}</div>}
+            {!typing && chatChoices.length > 0 && (
+              chatChoices.length > 4 ? (
+                <div className="glass ml-9 flex max-w-xs flex-col overflow-hidden rounded-2xl" role="listbox" aria-label="Choose an option">
+                  <p className="border-b border-border/60 px-4 py-2 text-xs font-medium text-muted-foreground">Tap to choose</p>
+                  <div className="max-h-72 overflow-y-auto">
+                    {chatChoices.map(choice => (
+                      <button key={choice} type="button" role="option" aria-selected="false" className="flex min-h-11 w-full items-center justify-between gap-2 border-b border-border/40 px-4 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent/50 active:bg-accent" onClick={() => send(choice)}>
+                        <span className="min-w-0 flex-1">{choice}</span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 pl-9" aria-label="Chat replies">{chatChoices.map(choice => <Button key={choice} variant="outline" className="min-h-11 max-w-full whitespace-normal" onClick={() => send(choice)}>{choice}</Button>)}</div>
+              )
+            )}
             <div ref={endRef} />
           </div>
         )}
