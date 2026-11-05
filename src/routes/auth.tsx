@@ -148,6 +148,11 @@ function AuthPage() {
             {success && <p role="status" className="flex items-start gap-2 text-sm text-primary"><Check className="h-5 w-5 shrink-0" />{success}</p>}
             <Button type="submit" className="h-13 w-full rounded-xl font-bold shadow-glow">{mode === "in" ? "Log in" : mode === "reset" ? "Reset demo PIN" : step === 0 ? "Let's get started" : step === 1 ? "Continue" : step === 2 ? "Create demo account" : "Complete setup"}<ArrowRight /></Button>
             {mode === "in" && bioPhone && <Button type="button" variant="outline" className="h-13 w-full rounded-xl font-bold" disabled={bioBusy} onClick={() => void unlock()}><ScanFace className="text-primary" />{bioBusy ? "Waiting for your device…" : "Unlock with biometrics"}</Button>}
+            {mode === "in" && <>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" /></div>
+              <Button type="button" variant="secondary" className="h-13 w-full rounded-xl font-bold" onClick={demoLogin}>Try the demo account<ArrowRight /></Button>
+              <p className="text-center text-xs leading-relaxed text-muted-foreground">One tap, no signup — a ready demo account with setup already done.</p>
+            </>}
           </form>
           {mode === "in" && <p className="mt-6 text-center text-sm text-muted-foreground">New to Nella? <Button variant="link" className="h-11 px-1 font-bold" onClick={() => switchMode("up")}>Get started</Button></p>}
           {mode === "up" && step === 2 && <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Use a unique test PIN, not your banking PIN. This demo stores it in this browser only.</p>}
