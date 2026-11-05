@@ -2,7 +2,7 @@
 
 ## Target experience
 
-A genuine mobile-first Nella money companion—not a generic AI chatbot. Customers log in or complete progressive onboarding, then go directly into chat. Keep Nella’s blue identity, Plus Jakarta Sans and friendly mascot. The top-right profile remains the home for account controls; avoid a crowded menu system or permanent dashboard navigation.
+Mobile-first Nella money companion: login/progressive onboarding → chat, with top-right profile and minimal navigation. Preserve Nella blue, Plus Jakarta Sans and friendly mascot.
 
 **Current position:** browser-local demo with payment preparation and preview downloads, not connected banking. Live authentication, identity checks, payments, alerts, receipts and support remain absent. The original repository contains execution paths; their production operation is unverified.
 
@@ -36,7 +36,7 @@ Alerts must cover account opening, credits, payment/refund/token outcomes, suppo
 
 ## Priority 1 — Concrete fixes found in the current app
 
-These are source findings; keyboard/overflow risks still require device testing. Details: `docs/mobile-readiness-fixes.md`.
+Source findings; device risks remain untested. Details: `docs/mobile-readiness-fixes.md`.
 
 1. Cancel delayed replies on clear/logout/unmount; do not automatically focus the composer after every reply or underneath a sheet.
 2. Stop scrolling customers away from older messages. Follow the bottom only when appropriate; otherwise show a new-message indicator.
