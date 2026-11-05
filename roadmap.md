@@ -1,4 +1,5 @@
 # Nella WhatsApp-to-app coverage
+- [x] Continue frontend-only mobile building: guided payment steps, searchable preview activity, preview details/share/reuse, and mobile regression checks; all 24 tests passed, live connections deferred.
 - [x] Implement mobile reply cancellation, history-aware scrolling/pagination, sheet navigation/draft retention, storage validation, intent corrections and accessibility improvements.
 - [x] Verify demo customer journey, close/back/draft/focus regressions at mobile/landscape/desktop sizes; all 21 tests passed.
 - [ ] Connect existing customer services — blocked: source exposes merchant APIs, not a verified personal-customer login/account adapter.
