@@ -19,4 +19,11 @@ describe("WhatsApp-to-app provisions", () => {
     expect(receipt.rows).toContainEqual(["Reference", "Not issued"]);
     expect(receipt.rows).toContainEqual(["Session ID", "Not issued"]);
   });
+  it("matches the original minimum transfer amount of 100 naira", () => {
+    expect(validatePaymentDraft({ ...transfer, amount: "99" })).toBe("The minimum amount is ₦100.");
+    expect(validatePaymentDraft({ ...transfer, amount: "100" })).toBeNull();
+  });
+  it("requires electricity meter type before preparing a bill", () => {
+    expect(validatePaymentDraft({ ...transfer, service: "electricity", provider: "Ikeja Electric", plan: "" })).toBe("Choose prepaid or postpaid.");
+  });
 });

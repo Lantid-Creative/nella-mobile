@@ -1,5 +1,5 @@
 export type MoneyService = "transfer" | "airtime" | "data" | "electricity" | "cable";
-export type AppPanel = MoneyService | "services" | "account" | "onboarding" | "activity" | "notifications" | "beneficiaries" | "scheduled" | "security" | "support" | "insights" | "business";
+export type AppPanel = MoneyService | "services" | "account" | "onboarding" | "activity" | "notifications" | "beneficiaries" | "scheduled" | "security" | "support" | "insights" | "business" | "referrals";
 
 export const SERVICE_LABELS: Record<MoneyService, string> = {
   transfer: "Send money", airtime: "Buy airtime", data: "Buy data", electricity: "Electricity", cable: "Cable TV",
@@ -23,6 +23,7 @@ export function panelForMessage(raw: string): AppPanel | null {
   if (/support|help|agent/.test(text)) return "support";
   if (/spending|insights|statement/.test(text)) return "insights";
   if (/invoice|payroll|business|payment request|bulk/.test(text)) return "business";
+  if (/refer|ambassador/.test(text)) return "referrals";
   return null;
 }
 
@@ -30,11 +31,13 @@ export type PaymentDraft = { service: MoneyService; amount: string; destination:
 export function validatePaymentDraft(draft: PaymentDraft): string | null {
   const amount = Number(draft.amount);
   if (!Number.isFinite(amount) || amount <= 0) return "Enter an amount greater than zero.";
+  if ((draft.service === "transfer" || draft.service === "electricity") && amount < 100) return "The minimum amount is ₦100.";
   if (!draft.provider.trim()) return "Choose a bank or provider.";
   if (draft.service === "transfer" && !/^\d{10}$/.test(draft.destination)) return "Enter a 10-digit account number.";
   if ((draft.service === "airtime" || draft.service === "data") && !/^0[789][01]\d{8}$/.test(draft.destination)) return "Enter a valid Nigerian phone number.";
   if ((draft.service === "electricity" || draft.service === "cable") && !/^\d{6,20}$/.test(draft.destination)) return "Enter the meter or smartcard number.";
   if ((draft.service === "data" || draft.service === "cable") && !draft.plan.trim()) return "Select a plan or package.";
+  if (draft.service === "electricity" && !draft.plan.trim()) return "Choose prepaid or postpaid.";
   return null;
 }
 

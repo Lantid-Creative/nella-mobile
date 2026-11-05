@@ -446,6 +446,7 @@ function ChatPage() {
             />
             <ProfileAction icon={ReceiptText} label="Spending & statements" onClick={() => { setMenu(false); setPanel("insights"); }} />
             <ProfileAction icon={UsersRound} label="Business payments" onClick={() => { setMenu(false); setPanel("business"); }} />
+            <ProfileAction icon={UsersRound} label="Referrals & ambassadors" onClick={() => { setMenu(false); setPanel("referrals"); }} />
             {confirmClear ? (
               <div className="mt-2 rounded-xl bg-muted p-3">
                 <p className="text-sm font-semibold">Clear this chat?</p>
