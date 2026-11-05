@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeftRight,
   ArrowUp,
+  ArrowDown,
   Bell,
   CalendarClock,
   Camera,
@@ -38,6 +39,9 @@ import { NellaMascot } from "@/components/nella-mascot";
 import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
 import { panelForMessage, type AppPanel, type ReceiptPreview } from "@/lib/app-provisions";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { usePendingReply, isNearConversationBottom, shouldSendOnEnter } from "@/hooks/use-chat-behavior";
+import { useServiceNavigation } from "@/hooks/use-service-navigation";
+import { STORAGE_NOTICE } from "@/lib/demo-storage";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -99,9 +103,14 @@ function ChatPage() {
   const [user, setUser] = useState<DemoUser | null>(null);
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
-  const [typing, setTyping] = useState(false);
+  const reply = usePendingReply();
+  const typing = reply.pending;
   const [menu, setMenu] = useState(false);
-  const [panel, setPanel] = useState<AppPanel | null>(null);
+  const { panel, change: setPanel, back: panelBack, depth: panelDepth } = useServiceNavigation();
+  const [newMessages, setNewMessages] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(40);
+  const scrollRef = useRef<HTMLElement>(null);
+  const followsBottom = useRef(true);
   const [confirmClear, setConfirmClear] = useState(false);
   const [notice, setNotice] = useState("");
   const [photoMenu, setPhotoMenu] = useState(false);
@@ -133,6 +142,13 @@ function ChatPage() {
     msgsRef.current = m;
     setMsgs(m);
   }, [navigate]);
+  useEffect(() => {
+    const warning = () => setNotice(STORAGE_NOTICE);
+    window.addEventListener("nella-storage-warning", warning);
+    const connection = () => { if (!navigator.onLine) setNotice("You’re offline. No payment requests will be sent."); };
+    window.addEventListener("offline", connection);
+    return () => { window.removeEventListener("nella-storage-warning", warning); window.removeEventListener("offline", connection); };
+  }, []);
 
   useEffect(() => {
     const updateHeight = () => {
@@ -153,7 +169,10 @@ function ChatPage() {
     const scrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
       ? "auto"
       : "smooth";
-    endRef.current?.scrollIntoView({ behavior: scrollBehavior, block: "end" });
+    if (followsBottom.current) {
+      endRef.current?.scrollIntoView({ behavior: scrollBehavior, block: "end" });
+      setNewMessages(false);
+    } else setNewMessages(true);
   }, [msgs, typing]);
 
   useEffect(
@@ -176,17 +195,14 @@ function ChatPage() {
   const commit = (next: ChatMsg[]) => {
     msgsRef.current = next;
     setMsgs(next);
-    if (user) saveChat(user.phone, next);
+    if (user && !saveChat(user.phone, next)) setNotice(STORAGE_NOTICE);
   };
   const nellaSays = (parts: Omit<ChatMsg, "id" | "at" | "role">[], delay = 800) => {
-    setTyping(true);
-    setTimeout(() => {
+    reply.schedule(() => {
       commit([
         ...msgsRef.current,
         ...parts.map((p) => ({ ...p, id: uid(), role: "nella" as const, at: Date.now() })),
       ]);
-      setTyping(false);
-      inputRef.current?.focus();
     }, delay);
   };
   const patch = (id: string, fn: (m: ChatMsg) => ChatMsg) =>
@@ -194,16 +210,17 @@ function ChatPage() {
 
   const send = (raw: string, media?: ChatMedia) => {
     const t = raw.trim();
-    if (!t || typing || !user) return;
+    if (!t || reply.busy.current || !user) return;
+    followsBottom.current = true;
     commit([
       ...msgsRef.current,
       { id: uid(), role: "user", text: t, ...(media ? { media } : {}), at: Date.now() },
     ]);
     setText("");
-    inputRef.current?.focus();
     if (inputRef.current) inputRef.current.style.height = "auto";
     const requestedPanel = media ? null : panelForMessage(t);
     if (requestedPanel) {
+      inputRef.current?.blur();
       setPanel(requestedPanel);
       return;
     }
@@ -350,6 +367,7 @@ function ChatPage() {
   };
 
   const pickNarration = (msgId: string, pending: ApprovalCard, choice: string | null) => {
+    if (reply.busy.current) return;
     patch(msgId, (m) =>
       m.card?.kind === "narration" ? { ...m, card: { ...m.card, done: true } } : m,
     );
@@ -386,24 +404,23 @@ function ChatPage() {
           }}
           aria-label="Profile"
           aria-expanded={menu}
-          className="glass flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground hover:bg-accent"
+          className="glass flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground hover:bg-accent"
         >
           <span className="text-sm font-bold text-primary">{first.slice(0,1)}</span>
         </Button>
         <Dialog open={menu} onOpenChange={setMenu}>
-          <DialogContent className="bottom-0 left-0 top-auto max-h-[85dvh] overflow-y-auto translate-x-0 translate-y-0 rounded-t-3xl p-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
+          <DialogContent className="nella-profile bottom-0 left-0 top-auto max-h-[calc(var(--app-height,100dvh)-1rem)] overflow-y-auto translate-x-0 translate-y-0 rounded-t-2xl p-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
             <DialogTitle>Your profile</DialogTitle>
             <DialogDescription>Manage your Nella demo account.</DialogDescription>
             <div className="flex items-start justify-between">
               <div>
-                <p className="font-bold">{user.name}</p>
+                <p className="break-all font-bold">{user.name}</p>
                 <p className="text-xs text-muted-foreground">+234 {user.phone}</p>
               </div>
             </div>
             <div className="my-3 h-px bg-border" />
             <ProfileAction icon={Wallet} label="Account & funding" onClick={() => { setMenu(false); setPanel("account"); }} />
             <ProfileAction icon={Shield} label="Complete account setup" onClick={() => { setMenu(false); setPanel("onboarding"); }} />
-            <ProfileAction icon={Bell} label="Notifications" onClick={() => { setMenu(false); setPanel("notifications"); }} />
             <ProfileAction
               icon={History}
               label="Activity & receipts"
@@ -418,14 +435,6 @@ function ChatPage() {
               onClick={() => {
                 setMenu(false);
                 setPanel("beneficiaries");
-              }}
-            />
-            <ProfileAction
-              icon={CalendarClock}
-              label="Scheduled payments"
-              onClick={() => {
-                setMenu(false);
-                setPanel("scheduled");
               }}
             />
             <ProfileAction
@@ -445,8 +454,7 @@ function ChatPage() {
               }}
             />
             <ProfileAction icon={ReceiptText} label="Spending & statements" onClick={() => { setMenu(false); setPanel("insights"); }} />
-            <ProfileAction icon={UsersRound} label="Business payments" onClick={() => { setMenu(false); setPanel("business"); }} />
-            <ProfileAction icon={UsersRound} label="Referrals & ambassadors" onClick={() => { setMenu(false); setPanel("referrals"); }} />
+            <details className="border-t border-border"><summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">More from Nella</summary><ProfileAction icon={UsersRound} label="Business payments" onClick={() => { setMenu(false); setPanel("business"); }} /><ProfileAction icon={UsersRound} label="Referrals & ambassadors" onClick={() => { setMenu(false); setPanel("referrals"); }} /></details>
             {confirmClear ? (
               <div className="mt-2 rounded-xl bg-muted p-3">
                 <p className="text-sm font-semibold">Clear this chat?</p>
@@ -462,6 +470,7 @@ function ChatPage() {
                   </Button>
                   <Button variant="plain" size="none"
                     onClick={() => {
+                      reply.cancel();
                       commit([]);
                       setConfirmClear(false);
                       setMenu(false);
@@ -481,7 +490,8 @@ function ChatPage() {
             )}
             <Button variant="plain" size="none"
               onClick={() => {
-                signOut();
+                reply.cancel();
+                if (!signOut()) { setNotice(STORAGE_NOTICE); return; }
                 navigate({ to: "/", replace: true });
               }}
               className="flex min-h-11 w-full items-center justify-start gap-3 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-accent"
@@ -493,6 +503,8 @@ function ChatPage() {
       </header>
 
       <main
+        ref={scrollRef}
+        onScroll={event => { followsBottom.current = isNearConversationBottom(event.currentTarget); if (followsBottom.current) setNewMessages(false); }}
         className="mx-auto min-h-0 w-full max-w-2xl flex-1 overflow-y-auto overscroll-contain px-4 sm:px-5"
         onClick={() => setMenu(false)}
       >
@@ -514,7 +526,8 @@ function ChatPage() {
         ) : (
           <div role="log" aria-label="Conversation with Nella" aria-live="polite" className="space-y-5 py-5">
             <p className="text-center text-[11px] text-muted-foreground">Today · Preview conversation</p>
-            {msgs.map((m) => (
+            {msgs.length > visibleCount && <Button variant="outline" className="h-11 w-full" onClick={() => { const element = scrollRef.current; const height = element?.scrollHeight ?? 0; const top = element?.scrollTop ?? 0; followsBottom.current = false; setVisibleCount(count => count + 40); requestAnimationFrame(() => { if (element) element.scrollTop = top + element.scrollHeight - height; }); }}>Earlier messages</Button>}
+            {msgs.slice(-visibleCount).map((m) => (
               <div
                 key={m.id}
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
@@ -610,7 +623,7 @@ function ChatPage() {
                             ? "Buy airtime"
                             : "Buy data"}
                       </p>
-                      <p className="mt-1 text-3xl font-extrabold tabular-nums text-foreground">
+                      <p className="mt-1 break-all text-2xl font-extrabold tabular-nums text-foreground">
                         {naira(m.card.amount)}
                       </p>
                       <dl className="mt-4 space-y-2 text-sm">
@@ -687,7 +700,8 @@ function ChatPage() {
         )}
       </main>
 
-      <NellaServices panel={panel} onChange={setPanel} user={user} previews={previews} onPreview={keepPreview} />
+      {newMessages && <Button variant="secondary" className="mx-auto my-2 h-11 shrink-0" onClick={() => { followsBottom.current = true; setNewMessages(false); endRef.current?.scrollIntoView({ block: "end" }); }}><ArrowDown />New messages</Button>}
+      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onPreview={keepPreview} />
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
@@ -714,7 +728,7 @@ function ChatPage() {
                 clearPhoto();
                 cameraInputRef.current?.click();
               }}
-              className="rounded-lg px-2 py-2 text-xs font-semibold hover:bg-accent"
+              className="min-h-11 rounded-lg px-2 py-2 text-xs font-semibold hover:bg-accent"
             >
               Retake
             </Button>
@@ -722,7 +736,7 @@ function ChatPage() {
               type="button"
               onClick={clearPhoto}
               aria-label="Remove photo"
-              className="rounded-full p-2 text-muted-foreground hover:bg-accent"
+              className="min-h-11 min-w-11 rounded-full p-2 text-muted-foreground hover:bg-accent"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -730,7 +744,7 @@ function ChatPage() {
               type="button"
               onClick={sendPhoto}
               disabled={typing}
-              className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
+              className="min-h-11 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40"
             >
               Attach
             </Button>
@@ -868,21 +882,21 @@ function ChatPage() {
               e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (shouldSendOnEnter({ key: e.key, shiftKey: e.shiftKey, isComposing: e.nativeEvent.isComposing }, window.matchMedia("(pointer: coarse)").matches)) {
                 e.preventDefault();
                 send(text);
               }
             }}
             placeholder="Message Nella…"
             aria-label="Message Nella"
-            className="max-h-32 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-base text-foreground placeholder:text-muted-foreground outline-none"
+            className="max-h-32 min-w-0 flex-1 resize-none rounded-lg bg-transparent px-1 py-2 text-base text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           {text.trim() ? (
             <Button variant="plain" size="none"
               type="submit"
               disabled={typing}
               aria-label="Send message"
-              className="shadow-glow flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 sm:h-10 sm:w-10"
+              className="shadow-glow flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
             >
               <ArrowUp className="h-5 w-5" />
             </Button>
@@ -916,7 +930,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4">
       <dt className="text-muted-foreground">{k}</dt>
-      <dd className="text-right font-semibold text-foreground">{v}</dd>
+      <dd className="min-w-0 break-all text-right font-semibold text-foreground">{v}</dd>
     </div>
   );
 }

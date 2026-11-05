@@ -117,4 +117,8 @@
 .auth-surface { background: var(--background); }
 .step-enter { animation: step-enter 240ms ease-out; }
 @keyframes step-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter, .animate-bounce, .animate-pulse { animation: none; } }
+.nella-sheet > button:last-child { display: none; }
+.nella-profile > button:last-child { position: sticky; bottom: 0; margin-left: auto; background: var(--card); }
+.nella-sheet { bottom: max(0px, calc(100dvh - var(--app-height,100dvh))); }
+@media (min-width: 640px) { .nella-sheet { top: calc(var(--app-height,100dvh) / 2); bottom: auto; } }

@@ -3,6 +3,14 @@ import { panelForMessage, paymentPreview, validatePaymentDraft, type PaymentDraf
 
 const transfer: PaymentDraft = { service: "transfer", amount: "5000", destination: "0123456789", provider: "GTBank", narration: "Rent", plan: "" };
 describe("WhatsApp-to-app provisions", () => {
+  it("routes a refund to support, not funding", () => {
+    expect(panelForMessage("Help with a refund")).toBe("support");
+    expect(panelForMessage("fund my account")).toBe("account");
+  });
+  it("routes forgotten PIN and account recovery to security", () => {
+    expect(panelForMessage("forgot PIN")).toBe("security");
+    expect(panelForMessage("recover account")).toBe("security");
+  });
   it("opens receipts through chat without adding a navigation page", () => {
     expect(panelForMessage("Show my receipts")).toBe("activity");
   });

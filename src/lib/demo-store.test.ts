@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   currentUser,
   demoReply,
@@ -12,6 +12,18 @@ import {
 describe("demo preview account and chat", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+  it("ignores malformed but valid stored JSON without crashing", () => {
+    localStorage.setItem("nella.users.v2", JSON.stringify({ unexpected: true }));
+    localStorage.setItem("nella.chat.v2.8012345678", JSON.stringify({ unexpected: true }));
+    expect(currentUser()).toBeNull(); expect(loadChat("8012345678")).toEqual([]);
+    localStorage.setItem("nella.chat.v2.8012345678", JSON.stringify([null, { id: "bad", role: "nella", at: 1, card: { kind: "preview", preview: null } }]));
+    expect(loadChat("8012345678")).toEqual([]);
+  });
+  it("reports an unsuccessful chat save instead of throwing on a full browser store", () => {
+    const store = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    expect(saveChat("8012345678", [])).toBe(false);
+    store.mockRestore();
   });
 
   it("resets a demo PIN only for an account in this browser", () => {

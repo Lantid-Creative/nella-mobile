@@ -1,6 +1,10 @@
 # Nella WhatsApp-to-app coverage
+- [x] Implement mobile reply cancellation, history-aware scrolling/pagination, sheet navigation/draft retention, storage validation, intent corrections and accessibility improvements.
+- [x] Verify demo customer journey, close/back/draft/focus regressions at mobile/landscape/desktop sizes; all 21 tests passed.
+- [ ] Connect existing customer services — blocked: source exposes merchant APIs, not a verified personal-customer login/account adapter.
 - [x] Outline prioritized mobile functionality, UI/UX, optimization, fixes and launch acceptance criteria.
 - [x] Audit the original repository's customer WhatsApp functionality.
 - [x] Provision mobile chat sheets for onboarding, payment previews, account funding, activity, notifications, support and supporting-service availability.
 - [x] Document full source coverage and integration gaps; verify mobile demo flows and 13 tests.
 - [ ] Connect verified account, payment, notification, receipt, support and merchant services — blocked by this app's absent approved service connection and credentials; never treat the source snapshot as live access.
+- [ ] Verify real iOS/Android keyboard behavior, push and release packaging — blocked by unavailable native device/release setup and the undecided distribution path.
