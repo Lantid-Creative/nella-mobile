@@ -2,7 +2,7 @@
 import type { ReceiptPreview } from "./app-provisions";
 import { z } from "zod";
 import { readDemoValue, writeDemoValue, removeDemoValue, STORAGE_NOTICE } from "./demo-storage";
-export type DemoUser = { name: string; phone: string; pin: string };
+export type DemoUser = { name: string; phone: string; pin: string; onboardingComplete?: boolean };
 
 export type ApprovalCard = {
   kind: "approval";
@@ -41,7 +41,7 @@ const USERS = "nella.users.v2";
 const SESSION = "nella.session.v2";
 const chatKey = (phone: string) => `nella.chat.v2.${phone}`;
 
-const userSchema = z.object({ name: z.string().trim().min(1), phone: z.string().regex(/^[789][01]\d{8}$/), pin: z.string().regex(/^\d{4}$/) });
+const userSchema = z.object({ name: z.string().trim().min(1), phone: z.string().regex(/^[789][01]\d{8}$/), pin: z.string().regex(/^\d{4}$/), onboardingComplete: z.boolean().default(false) });
 const approvalSchema = z.object({ kind: z.literal("approval"), service: z.enum(["transfer", "airtime", "data"]), amount: z.number().finite().positive(), account: z.string(), bank: z.string(), narration: z.string().optional(), status: z.enum(["pending", "approved", "cancelled"]) });
 const receiptSchema = z.object({ title: z.string(), amount: z.number().finite().positive(), rows: z.array(z.tuple([z.string(), z.string()])) });
 const messageSchema = z.object({
@@ -76,7 +76,8 @@ export function signUp(name: string, phoneRaw: string, pin: string) {
   const users = readUsers();
   if (users.some((u) => u.phone === phone))
     throw new Error("This number already has an account. Log in instead.");
-  users.push({ name: name.trim(), phone, pin });
+  if (name.trim().split(/\s+/).length < 2) throw new Error("Enter your first and last name.");
+  users.push({ name: name.trim(), phone, pin, onboardingComplete: false });
   persistUsers(users);
   setSession(phone);
 }
@@ -119,6 +120,19 @@ export function currentUser(): DemoUser | null {
 }
 
 export const checkPin = (u: DemoUser, pin: string) => u.pin === pin;
+
+/** Demo onboarding is not live identity verification or banking authorization. */
+export function completeOnboarding() {
+  const active = currentUser();
+  if (!active) throw new Error("Log in to finish your account setup.");
+  const users = readUsers();
+  const user = users.find(candidate => candidate.phone === active.phone);
+  if (!user) throw new Error("Your account could not be found.");
+  user.onboardingComplete = true;
+  persistUsers(users);
+}
+
+export const canEnterChat = (user: DemoUser | null): boolean => user?.onboardingComplete === true;
 
 const LEGACY_CHAT_COPY: Record<string, string> = {
   "Bill photo · preview only": "Payment photo",
