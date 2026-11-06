@@ -19,6 +19,8 @@
 - [ ] Connect verified account, payment, notification, receipt, support and merchant services — blocked by this app's absent approved service connection and credentials; never treat the source snapshot as live access.
 - [ ] Verify real iOS/Android keyboard behavior, push and release packaging — blocked by unavailable native device/release setup and the undecided distribution path.
 ## Mobile UX plan (Nov 5)
+- [ ] Complete requested batch: login/setup polish, breakdown editing/reuse, hold-to-record voice, interruption recovery and browser mobile regression checks.
+- [ ] Run physical iPhone/Android acceptance checks — blocked: no physical devices available in this workspace.
 - [x] Chat: date dividers, message grouping, gentle message animation, swipe tip, Copy in hold menu
 - [x] Time-of-day greeting; payment step tracker with Cancel; searchable long lists
 - [x] PIN auto-check with shake; sign-out confirmation; offline banner; faster splash for returning customers

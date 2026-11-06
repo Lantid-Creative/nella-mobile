@@ -2,7 +2,7 @@
 import type { ReceiptPreview } from "./app-provisions";
 import { z } from "zod";
 import { readDemoValue, writeDemoValue, removeDemoValue, STORAGE_NOTICE } from "./demo-storage";
-export type DemoUser = { name: string; phone: string; pin: string; onboardingComplete?: boolean; kycSetupComplete?: boolean };
+export type DemoUser = { name: string; phone: string; pin: string; onboardingComplete?: boolean; kycSetupComplete?: boolean; kycStep?: number };
 
 export type ApprovalCard = {
   kind: "approval";
@@ -43,7 +43,7 @@ const USERS = "nella.users.v2";
 const SESSION = "nella.session.v2";
 const chatKey = (phone: string) => `nella.chat.v2.${phone}`;
 
-const userSchema = z.object({ name: z.string().trim().min(1), phone: z.string().regex(/^[789][01]\d{8}$/), pin: z.string().regex(/^\d{4}$/), onboardingComplete: z.boolean().default(false), kycSetupComplete: z.boolean().default(false) });
+const userSchema = z.object({ name: z.string().trim().min(1), phone: z.string().regex(/^[789][01]\d{8}$/), pin: z.string().regex(/^\d{4}$/), onboardingComplete: z.boolean().default(false), kycSetupComplete: z.boolean().default(false), kycStep: z.number().int().min(0).max(2).default(0) });
 const approvalSchema = z.object({ kind: z.literal("approval"), service: z.enum(["transfer", "airtime", "data"]), amount: z.number().finite().positive(), account: z.string(), bank: z.string(), narration: z.string().optional(), status: z.enum(["pending", "approved", "cancelled"]) });
 const receiptSchema = z.object({ title: z.string(), amount: z.number().finite().positive(), rows: z.array(z.tuple([z.string(), z.string()])) });
 const messageSchema = z.object({
@@ -148,6 +148,17 @@ export function currentUser(): DemoUser | null {
 }
 
 export const checkPin = (u: DemoUser, pin: string) => u.pin === pin;
+
+export function saveKycStep(step: number) {
+  if (!Number.isInteger(step) || step < 0 || step > 2) throw new Error("Invalid setup step.");
+  const active = currentUser();
+  if (!active) throw new Error("Log in to continue setup.");
+  const users = readUsers();
+  const user = users.find(candidate => candidate.phone === active.phone);
+  if (!user) throw new Error("Account not found.");
+  user.kycStep = step;
+  persistUsers(users);
+}
 
 /** Demo onboarding is not live identity verification or banking authorization. */
 export function completeDemoKyc() {
