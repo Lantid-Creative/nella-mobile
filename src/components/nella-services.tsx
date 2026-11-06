@@ -20,7 +20,7 @@ export function NellaServices({ panel, onChange, onBack, depth, user, previews, 
   return <Dialog open={panel !== null} onOpenChange={open => { if (!open) onChange(null); }}>
     <DialogContent className="nella-sheet left-0 top-auto flex max-h-[calc(var(--app-height,100dvh)-1rem)] flex-col gap-0 overflow-hidden translate-x-0 translate-y-0 rounded-t-2xl p-0 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
       <header className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-border px-3 py-3">
-        <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Back" onClick={() => depth > 1 ? onBack() : onChange(null)}><ArrowLeft /></Button>
+        <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Back" onClick={() => depth > 0 ? onBack() : onChange(null)}><ArrowLeft /></Button>
         <div className="min-w-0"><DialogTitle className="break-words text-base leading-snug">{panel ? TITLES[panel] : "Nella"}</DialogTitle><DialogDescription className="mt-1 text-xs">Preview · Live banking unavailable</DialogDescription></div>
         <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Close" onClick={() => onChange(null)}><X /></Button>
       </header>

@@ -135,6 +135,13 @@ function ChatPage() {
   const [payment, setPayment] = useState<PaymentConversation | null>(null);
   const [approval, setApproval] = useState<PaymentConversation | null>(null);
   const [chatChoices, setChatChoices] = useState<string[]>([]);
+  const fromProfile = useRef(false);
+  const [profileFull, setProfileFull] = useState(false);
+  const dragStart = useRef<number | null>(null);
+  useEffect(() => { if (panel === null && fromProfile.current) { fromProfile.current = false; setMenu(true); } }, [panel]);
+  useEffect(() => { if (!menu) setProfileFull(false); }, [menu]);
+  const openFromProfile = (next: AppPanel) => { setMenu(false); fromProfile.current = true; setPanel(next); };
+  const closePanel = (next: AppPanel | null) => { if (next === null) fromProfile.current = false; setPanel(next); };
   const setPanel = (next: AppPanel | null) => {
     if (next && (next in SERVICE_LABELS || next === "services")) {
       changePanel(null);
@@ -411,7 +418,14 @@ function ChatPage() {
           <span className="text-sm font-bold text-primary">{first.slice(0,1)}</span>
         </Button>
         <Dialog open={menu} onOpenChange={setMenu}>
-          <DialogContent className="nella-profile bottom-0 left-0 top-auto max-h-[calc(var(--app-height,100dvh)-1rem)] overflow-y-auto translate-x-0 translate-y-0 rounded-t-2xl p-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
+          <DialogContent style={{ height: profileFull ? "calc(var(--app-height,100dvh) - 1rem)" : "min(55%, calc(var(--app-height,100dvh) * 0.55))" }} onScroll={event => { if (!profileFull && event.currentTarget.scrollTop > 24) setProfileFull(true); }} className="nella-profile bottom-0 left-0 top-auto max-h-[calc(var(--app-height,100dvh)-1rem)] overflow-y-auto translate-x-0 translate-y-0 rounded-t-2xl px-6 pb-6 pt-0 transition-[height] duration-300 sm:h-auto sm:pt-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
+            <div role="button" tabIndex={0} aria-label={profileFull ? "Show less" : "Show more"} className="sticky top-0 z-10 -mx-6 flex h-8 cursor-grab touch-none items-center justify-center bg-background sm:hidden"
+              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") setProfileFull(f => !f); }}
+              onClick={() => setProfileFull(f => !f)}
+              onPointerDown={event => { dragStart.current = event.clientY; }}
+              onPointerUp={event => { const start = dragStart.current; dragStart.current = null; if (start === null) return; const dy = event.clientY - start; if (dy < -30) setProfileFull(true); else if (dy > 40) { if (profileFull) setProfileFull(false); else setMenu(false); } }}>
+              <span className="h-1.5 w-10 rounded-full bg-muted-foreground/40" />
+            </div>
             <DialogTitle>Your profile</DialogTitle>
             <DialogDescription>Manage your Nella demo account.</DialogDescription>
             <div className="flex items-start justify-between">
@@ -425,42 +439,30 @@ function ChatPage() {
               <span className="text-sm font-semibold">Appearance</span>
               <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-full" aria-label={theme.dark ? "Switch to light mode" : "Switch to dark mode"} onClick={() => theme.setChoice(theme.dark ? "light" : "dark")}>{theme.dark ? <Sun /> : <Moon />}</Button>
             </div>
-            <ProfileAction icon={Wallet} label="Account & funding" onClick={() => { setMenu(false); setPanel("account"); }} />
-            <ProfileAction icon={Shield} label="Complete account setup" onClick={() => { setMenu(false); setPanel("onboarding"); }} />
+            <ProfileAction icon={Wallet} label="Account & funding" onClick={() => openFromProfile("account")} />
+            <ProfileAction icon={Shield} label="Complete account setup" onClick={() => openFromProfile("onboarding")} />
             <ProfileAction
               icon={History}
               label="Activity & receipts"
-              onClick={() => {
-                setMenu(false);
-                setPanel("activity");
-              }}
+              onClick={() => openFromProfile("activity")}
             />
             <ProfileAction
               icon={UsersRound}
               label="Beneficiaries"
-              onClick={() => {
-                setMenu(false);
-                setPanel("beneficiaries");
-              }}
+              onClick={() => openFromProfile("beneficiaries")}
             />
             <ProfileAction
               icon={Shield}
               label="Security & PIN"
-              onClick={() => {
-                setMenu(false);
-                setPanel("security");
-              }}
+              onClick={() => openFromProfile("security")}
             />
             <ProfileAction
               icon={CircleHelp}
               label="Help & support"
-              onClick={() => {
-                setMenu(false);
-                setPanel("support");
-              }}
+              onClick={() => openFromProfile("support")}
             />
-            <ProfileAction icon={ReceiptText} label="Spending & statements" onClick={() => { setMenu(false); setPanel("insights"); }} />
-            <details className="border-t border-border"><summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">More from Nella</summary><ProfileAction icon={UsersRound} label="Business payments" onClick={() => { setMenu(false); setPanel("business"); }} /><ProfileAction icon={UsersRound} label="Referrals & ambassadors" onClick={() => { setMenu(false); setPanel("referrals"); }} /></details>
+            <ProfileAction icon={ReceiptText} label="Spending & statements" onClick={() => openFromProfile("insights")} />
+            <details className="border-t border-border"><summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">More from Nella</summary><ProfileAction icon={UsersRound} label="Business payments" onClick={() => openFromProfile("business")} /><ProfileAction icon={UsersRound} label="Referrals & ambassadors" onClick={() => openFromProfile("referrals")} /></details>
             {confirmClear ? (
               <div className="mt-2 rounded-xl bg-muted p-3">
                 <p className="text-sm font-semibold">Clear this chat?</p>
@@ -743,7 +745,7 @@ function ChatPage() {
 
       {!payment && !typing && lastPrepared && <Button variant="ghost" className="mx-3 my-1 h-auto min-h-11 shrink-0 whitespace-normal text-xs" onClick={() => reuse(lastPrepared)}><RotateCcw className="shrink-0" />Prepare again · {SERVICE_LABELS[lastPrepared.service]} · {naira(Number(lastPrepared.amount))}</Button>}
       {newMessages && <Button variant="secondary" className="mx-auto my-2 h-11 shrink-0" onClick={() => { followsBottom.current = true; setNewMessages(false); scrollToLatest(); }}><ArrowDown />New messages</Button>}
-      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={reuse} />
+      <NellaServices panel={panel} onChange={closePanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={reuse} />
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
