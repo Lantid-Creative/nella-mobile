@@ -120,6 +120,7 @@ html[data-chat-keyboard] .chat-composer { padding-bottom: 0.5rem; }
 html[data-chat-keyboard] .chat-surface > header { padding-top: 0.5rem; padding-bottom: 0.5rem; }
 html[data-chat-keyboard] .chat-welcome-mascot { width: 5rem; height: 5rem; }
 .auth-surface { background: var(--background); }
+.photo-review { top: var(--app-top, 0px); height: var(--app-height, 100dvh); }
 .step-enter { animation: step-enter 240ms ease-out; }
 @keyframes step-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .splash-surface { background: var(--gradient-splash); }

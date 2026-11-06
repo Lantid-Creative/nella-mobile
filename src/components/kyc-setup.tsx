@@ -3,10 +3,9 @@ import { ArrowLeft, ArrowRight, Check, MapPin, ShieldCheck, UserRound } from "lu
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
 
-type KycSetupProps = { name: string; phone: string; error: string; onComplete: () => void };
+type KycSetupProps = { name: string; phone: string; error: string; step: number; onStepChange: (step: number) => void; onComplete: () => void };
 
-export function KycSetup({ name, phone, error, onComplete }: KycSetupProps) {
-  const [step, setStep] = useState(0);
+export function KycSetup({ name, phone, error, step, onStepChange: setStep, onComplete }: KycSetupProps) {
   const [acknowledged, setAcknowledged] = useState(false);
   const titles = ["Let's set up your KYC.", "Your address details.", "Review your KYC setup."];
   return <section className="flex flex-1 flex-col justify-center py-5">

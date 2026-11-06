@@ -41,6 +41,9 @@ import { NellaMascot } from "@/components/nella-mascot";
 import { dayLabel, filterChoices, greeting, groupInfo, haptic, paymentSteps } from "@/lib/chat-ux";
 import { MessageGestures, quoteText, toggleReaction } from "@/components/message-gestures";
 import { NellaCamera } from "@/components/nella-camera";
+import { VoiceNoteControl } from "@/components/voice-note-control";
+import { useVoiceNote } from "@/hooks/use-voice-note";
+import { draftFromPreview } from "@/lib/preview-workspace";
 import { PaymentApproval } from "@/components/payment-approval";
 import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
 import { panelForMessage, paymentPreview, type AppPanel, type ReceiptPreview } from "@/lib/app-provisions";
@@ -142,19 +145,18 @@ function ChatPage() {
   const [photoMenu, setPhotoMenu] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<{ file: File; url: string } | null>(null);
-  const [voiceMode, setVoiceMode] = useState<"idle" | "recording" | "review">("idle");
-  const [voiceUrl, setVoiceUrl] = useState("");
-  const [voiceDuration, setVoiceDuration] = useState(0);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const voice = useVoiceNote(setNotice);
+  const voiceMode = voice.mode;
+  const voiceUrl = voice.url;
+  const voiceDuration = voice.seconds;
+  const recordingSeconds = voice.seconds;
+  const startVoiceRecording = voice.start;
+  const stopVoiceRecording = voice.stop;
+  const discardVoiceRecording = voice.discard;
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const msgsRef = useRef<ChatMsg[]>([]);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const recordingFailedRef = useRef(false);
-  const recordingStartRef = useRef(0);
   const objectUrlsRef = useRef<string[]>([]);
   useChatViewport(scrollRef, followsBottom);
   const scrollToLatest = (behavior: ScrollBehavior = "auto") => {
@@ -197,20 +199,19 @@ function ChatPage() {
 
   useEffect(
     () => () => {
-      recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     },
     [],
   );
 
   useEffect(() => {
-    if (voiceMode !== "recording") return;
-    const timer = window.setInterval(() => {
-      setRecordingSeconds(Math.floor((Date.now() - recordingStartRef.current) / 1000));
-    }, 250);
-    return () => window.clearInterval(timer);
-  }, [voiceMode]);
+    const hidden = () => { if (document.hidden) { setApproval(null); setPhotoMenu(false); inputRef.current?.blur(); } };
+    const back = () => { setApproval(null); setPendingPhoto(null); setPhotoCaption(""); };
+    document.addEventListener("visibilitychange", hidden);
+    window.addEventListener("popstate", back);
+    return () => { document.removeEventListener("visibilitychange", hidden); window.removeEventListener("popstate", back); };
+  }, []);
 
   const commit = (next: ChatMsg[]) => {
     msgsRef.current = next;
@@ -234,6 +235,7 @@ function ChatPage() {
     if (payment?.field === "review" && /^(?:approve(?: payment)?|confirm(?: payment)?|pay now)$/i.test(t)) {
       setText("");
       inputRef.current?.blur();
+      if (offline) { setNotice("You’re offline. Reconnect before approval. Nothing has been submitted."); return; }
       setApproval(payment);
       return;
     }
@@ -288,7 +290,7 @@ function ChatPage() {
 
   const runQuickAction = (action: QuickAction) => {
     if (action.attachment) {
-      setPhotoMenu(true);
+      cameraInputRef.current?.click();
       return;
     }
     send(action.prompt);
@@ -323,86 +325,8 @@ function ChatPage() {
     setPendingPhoto(null);
   };
 
-  const startVoiceRecording = async () => {
-    setNotice("");
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      setNotice(
-        "Voice recording isn’t supported in this browser. Try a current browser over HTTPS.",
-      );
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((type) =>
-        MediaRecorder.isTypeSupported(type),
-      );
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      chunksRef.current = [];
-      recordingFailedRef.current = false;
-      recorder.ondataavailable = (event) => {
-        if (event.data.size) chunksRef.current.push(event.data);
-      };
-      recorder.onerror = () => {
-        recordingFailedRef.current = true;
-        stream.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-        recorderRef.current = null;
-        setVoiceMode("idle");
-        setNotice("The recording stopped unexpectedly. Please try again.");
-      };
-      recorder.onstop = () => {
-        if (recordingFailedRef.current) {
-          chunksRef.current = [];
-        } else {
-          const type = recorder.mimeType || "audio/webm";
-          const blob = new Blob(chunksRef.current, { type });
-          if (!blob.size) {
-            setVoiceMode("idle");
-            setNotice("No audio was recorded. Please try again.");
-          } else {
-            const url = URL.createObjectURL(blob);
-            objectUrlsRef.current.push(url);
-            setVoiceUrl(url);
-            setVoiceDuration(
-              Math.max(1, Math.floor((Date.now() - recordingStartRef.current) / 1000)),
-            );
-            setVoiceMode("review");
-          }
-        }
-        stream.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-        recorderRef.current = null;
-      };
-      recorderRef.current = recorder;
-      recordingStartRef.current = Date.now();
-      setRecordingSeconds(0);
-      recorder.start();
-      setVoiceMode("recording");
-    } catch (error) {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      const message =
-        error instanceof DOMException && error.name === "NotAllowedError"
-          ? "Microphone access was denied. Allow it in your browser settings to record a note."
-          : "Couldn’t start recording. Check your microphone and try again.";
-      setNotice(message);
-    }
-  };
-
-  const stopVoiceRecording = () => {
-    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
-  };
-
-  const discardVoiceRecording = () => {
-    if (voiceUrl) URL.revokeObjectURL(voiceUrl);
-    setVoiceUrl("");
-    setVoiceDuration(0);
-    setVoiceMode("idle");
-  };
-
   const sendPhoto = () => {
-    if (!pendingPhoto) return;
+    if (!pendingPhoto || reply.busy.current) return;
     const media: ChatMedia = {
       kind: "image",
       label: pendingPhoto.file.name,
@@ -414,7 +338,7 @@ function ChatPage() {
   };
 
   const sendVoice = () => {
-    if (!voiceUrl) return;
+    if (!voiceUrl || reply.busy.current) return;
     const media: ChatMedia = {
       kind: "audio",
       label: "Voice note",
@@ -422,9 +346,8 @@ function ChatPage() {
       durationSeconds: voiceDuration,
     };
     send("Voice note", media);
-    setVoiceUrl("");
-    setVoiceDuration(0);
-    setVoiceMode("idle");
+    const sent = voice.take();
+    objectUrlsRef.current.push(sent.url);
   };
 
   const pickNarration = (msgId: string, pending: ApprovalCard, choice: string | null) => {
@@ -447,9 +370,15 @@ function ChatPage() {
 
   if (!user) return <div className="min-h-screen bg-background" />;
   const previews = msgs.flatMap(message => message.card?.kind === "preview" ? [message.card.preview] : []);
-  const keepPreview = (preview: ReceiptPreview) => {
-    commit([...msgsRef.current, { id: uid(), role: "nella", at: Date.now(), card: { kind: "preview", preview } }]);
+  const reuse = (draft: PaymentDraft) => {
+    if (reply.busy.current) return;
+    setApproval(null); changePanel(null); followsBottom.current = true;
+    const turn = startPayment(draft.service, "", user.name, draft);
+    setPayment(turn.state); setChatChoices(turn.choices ?? []);
+    nellaSays([{ text: turn.text, ...(turn.preview ? { card: { kind: "preview" as const, preview: turn.preview } } : {}) }]);
   };
+  const latestPreviewId = [...msgs].reverse().find(message => message.card?.kind === "preview")?.id;
+  const lastPrepared = [...previews].reverse().map(draftFromPreview).find(draft => draft !== null);
   const first = user.name.split(" ")[0] || "there";
   const empty = msgs.length === 0;
 
@@ -611,7 +540,7 @@ function ChatPage() {
                 <MessageGestures copyText={m.text} mine={m.role === "user"} reactions={m.reactions} onReply={() => { setReplyingTo(m); inputRef.current?.focus(); }} onReact={(emoji) => patch(m.id, (x) => ({ ...x, reactions: toggleReaction(x.reactions, emoji) }))}>
                 <div className="space-y-2">
                   {m.replyTo && (
-                    <Button variant="plain" size="none" onClick={() => document.getElementById(`msg-${m.replyTo!.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })} className={`block h-auto w-full whitespace-normal rounded-xl border-l-4 border-primary bg-muted px-3 py-2 text-left text-xs text-muted-foreground`}>
+                    <Button variant="plain" size="none" onClick={() => document.getElementById(`msg-${m.replyTo?.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })} className={`block h-auto w-full whitespace-normal rounded-xl border-l-4 border-primary bg-muted px-3 py-2 text-left text-xs text-muted-foreground`}>
                       <span className="block font-semibold text-foreground">{m.replyTo.role === "user" ? "You" : "Nella"}</span>
                       <span className="line-clamp-2 break-words">{m.replyTo.text}</span>
                     </Button>
@@ -664,7 +593,7 @@ function ChatPage() {
                       </p>
                     </div>
                   )}
-                  {m.card?.kind === "preview" && <PaymentPreviewCard receipt={m.card.preview} />}
+                  {m.card?.kind === "preview" && <PaymentPreviewCard receipt={m.card.preview} onEdit={payment?.field === "review" && m.id === latestPreviewId && !typing ? field => { setApproval(null); send(`Change ${field === "destination" ? "number" : field}`); } : undefined} />}
                   {m.card?.kind === "narration" &&
                     !m.card.done &&
                     (() => {
@@ -803,8 +732,9 @@ function ChatPage() {
         )}
       </main>
 
+      {!payment && !typing && lastPrepared && <Button variant="ghost" className="mx-3 my-1 h-auto min-h-11 shrink-0 whitespace-normal text-xs" onClick={() => reuse(lastPrepared)}><RotateCcw className="shrink-0" />Prepare again · {SERVICE_LABELS[lastPrepared.service]} · {naira(Number(lastPrepared.amount))}</Button>}
       {newMessages && <Button variant="secondary" className="mx-auto my-2 h-11 shrink-0" onClick={() => { followsBottom.current = true; setNewMessages(false); scrollToLatest(); }}><ArrowDown />New messages</Button>}
-      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={(draft: PaymentDraft) => { changePanel(null); if (reply.busy.current) return; const turn = startPayment(draft.service, "", user.name, draft); setPayment(turn.state); setChatChoices(turn.choices ?? []); if (turn.preview) keepPreview(turn.preview); nellaSays([{ text: turn.text }]); }} />
+      <NellaServices panel={panel} onChange={setPanel} onBack={panelBack} depth={panelDepth} user={user} previews={previews} onReuse={reuse} />
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
@@ -813,7 +743,7 @@ function ChatPage() {
         className="chat-composer mx-auto w-full max-w-2xl shrink-0 border-t border-border bg-card px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5"
       >
         {pendingPhoto && (
-          <div role="dialog" aria-modal="true" aria-label="Send photo" className="fixed inset-0 z-50 flex flex-col bg-foreground text-background">
+          <div role="dialog" aria-modal="true" aria-label="Send photo" className="photo-review fixed left-0 right-0 z-50 flex flex-col bg-foreground text-background">
             <div className="flex items-center justify-between px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
               <Button variant="plain" size="none" type="button" onClick={() => { clearPhoto(); setPhotoCaption(""); }} aria-label="Discard photo" className="h-11 w-11 rounded-full hover:bg-background/10"><X className="h-6 w-6" /></Button>
               <Button variant="plain" size="none" type="button" onClick={() => { clearPhoto(); cameraInputRef.current?.click(); }} className="h-11 rounded-full px-4 text-sm font-semibold hover:bg-background/10"><Camera className="h-5 w-5" />Retake</Button>
@@ -822,7 +752,7 @@ function ChatPage() {
               <img src={pendingPhoto.url} alt="Photo to send" className="max-h-full max-w-full object-contain" />
             </div>
             <div className="flex items-end gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-              <input value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value.slice(0, 200))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendPhoto(); } }} placeholder="Add a caption…" aria-label="Add a caption" className="h-12 min-w-0 flex-1 rounded-full bg-background/15 px-4 text-base text-background placeholder:text-background/60 outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value.slice(0, 200))} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); sendPhoto(); } }} placeholder="Add a caption…" aria-label="Add a caption" className="h-12 min-w-0 flex-1 rounded-full bg-background/15 px-4 text-base text-background placeholder:text-background/60 outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <Button type="button" size="none" onClick={sendPhoto} disabled={typing} aria-label="Send photo" className="h-12 w-12 shrink-0 rounded-full"><ArrowUp className="h-5 w-5" /></Button>
             </div>
           </div>
@@ -836,12 +766,15 @@ function ChatPage() {
             <Button variant="plain" size="none"
               type="button"
               onClick={stopVoiceRecording}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+              className="min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
             >
               Stop & review
             </Button>
+            <Button variant="ghost" size="icon" type="button" aria-label="Cancel recording" title="Cancel recording" onClick={discardVoiceRecording} className="h-11 w-11 shrink-0"><X /></Button>
           </div>
         )}
+        {voiceMode === "starting" && <p role="status" className="mb-2 text-sm text-muted-foreground">Waiting for microphone permission…</p>}
+        {voiceMode === "recording" && <p className="mb-2 text-xs text-muted-foreground">Slide left to cancel</p>}
         {voiceMode === "review" && (
           <div className="glass mb-2 space-y-2 rounded-2xl border border-border p-3">
             <p className="text-sm font-semibold">Review voice note · {voiceDuration}s</p>
@@ -851,11 +784,11 @@ function ChatPage() {
               className="w-full"
               aria-label="Review voice note before sending"
             />
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button variant="plain" size="none"
                 type="button"
                 onClick={discardVoiceRecording}
-                className="rounded-xl border border-border px-3 py-2 text-sm font-semibold"
+                className="min-h-11 rounded-xl border border-border px-3 py-2 text-sm font-semibold"
               >
                 Discard
               </Button>
@@ -865,7 +798,7 @@ function ChatPage() {
                   discardVoiceRecording();
                   void startVoiceRecording();
                 }}
-                className="rounded-xl border border-border px-3 py-2 text-sm font-semibold"
+                className="min-h-11 rounded-xl border border-border px-3 py-2 text-sm font-semibold"
               >
                 Record again
               </Button>
@@ -873,14 +806,14 @@ function ChatPage() {
                 type="button"
                 onClick={sendVoice}
                 disabled={typing}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-40"
+                className="min-h-11 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-40"
               >
                 Send voice note
               </Button>
             </div>
           </div>
         )}
-        {offline && <p role="status" className="mb-2 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-foreground">You’re offline. Messages will send when you reconnect; no payment requests are sent.</p>}
+        {offline && <p role="status" className="mb-2 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-foreground">You’re offline. This demo can prepare details locally, but messages and payments are not queued or sent to Nella.</p>}
         {payment && (
           <div className="mb-2 flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
             <ol aria-label="Payment progress" className="flex min-w-0 flex-1 gap-1 overflow-x-auto text-[11px]">
@@ -1007,24 +940,7 @@ function ChatPage() {
               <ArrowUp className="h-5 w-5" />
             </Button>
           ) : (
-            <Button variant="plain" size="none"
-              type="button"
-              onClick={() =>
-                voiceMode === "recording" ? stopVoiceRecording() : void startVoiceRecording()
-              }
-              aria-label={
-                voiceMode === "recording" ? "Stop voice recording" : "Record a voice note"
-              }
-              title="Record a voice note"
-              disabled={voiceMode === "review"}
-              className={`shadow-glow flex h-11 w-11 shrink-0 items-center justify-center rounded-full disabled:opacity-40 ${
-                voiceMode === "recording"
-                  ? "bg-destructive text-destructive-foreground"
-                  : "bg-primary text-primary-foreground"
-              }`}
-            >
-              <Mic className="h-5 w-5" />
-            </Button>
+            <VoiceNoteControl mode={voiceMode} disabled={typing} start={() => void startVoiceRecording()} stop={stopVoiceRecording} discard={discardVoiceRecording} />
           )}
         </div>
       </form>

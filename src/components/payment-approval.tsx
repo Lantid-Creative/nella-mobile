@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +10,12 @@ export function PaymentApproval({ receipt, user, onClose, onComplete }: { receip
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const close = () => { setPin(""); setError(""); onClose(); };
+  useEffect(() => {
+    const visibility = () => { if (document.hidden) { setPin(""); setError(""); onClose(); } };
+    const leave = () => { setPin(""); onClose(); };
+    document.addEventListener("visibilitychange", visibility); window.addEventListener("pagehide", leave);
+    return () => { document.removeEventListener("visibilitychange", visibility); window.removeEventListener("pagehide", leave); };
+  }, [onClose]);
   const [shake, setShake] = useState(0);
   const check = (value: string) => {
     const problem = demoApprovalError(value, user);
