@@ -164,7 +164,8 @@ html[data-chat-keyboard] .chat-welcome-mascot { width: 5rem; height: 5rem; }
 @keyframes splash-leave { to { opacity: 0; transform: scale(1.03); } }
 @media (prefers-reduced-motion: reduce) { .nella-mascot, .step-enter, .splash-orb, .splash-dot, .splash-leave, .animate-bounce, .animate-pulse { animation: none; } }
 .nella-sheet > button:last-child { display: none; }
-.nella-profile > button:last-child { position: sticky; bottom: 0; margin-left: auto; background: var(--card); }
+.nella-profile { height: calc(var(--app-height, 100dvh) * 0.55); }
+.nella-profile-expanded { height: calc(var(--app-height, 100dvh) - 1rem); }
 .nella-sheet, .nella-profile, .nella-approval {
   bottom: max(0px, calc(100% - var(--app-top, 0px) - var(--app-height, 100dvh)));
   max-height: calc(var(--app-height, 100dvh) - 1rem);
@@ -172,6 +173,7 @@ html[data-chat-keyboard] .chat-welcome-mascot { width: 5rem; height: 5rem; }
 }
 html[data-chat-keyboard] .nella-profile, html[data-chat-keyboard] .nella-approval { padding-bottom: 1rem; }
 @media (min-width: 640px) {
+  .nella-profile { height: auto; }
   .nella-sheet, .nella-profile, .nella-approval { top: calc(var(--app-top, 0px) + var(--app-height, 100dvh) / 2); bottom: auto; }
 }
 

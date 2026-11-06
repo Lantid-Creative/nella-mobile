@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from "react";
 import { Copy, Reply } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -32,10 +32,12 @@ export function MessageGestures({ mine, copyText, reactions, onReply, onReact, c
   const horizontal = useRef<boolean | null>(null);
   const press = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearPress = () => { if (press.current) clearTimeout(press.current); press.current = null; };
+  useEffect(() => () => clearPress(), []);
 
   const down = (e: PointerEvent) => {
     if ((e.target as HTMLElement).closest("button,a,audio,input,[role=option]")) return;
     start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    e.currentTarget.setPointerCapture(e.pointerId);
     horizontal.current = null;
     clearPress();
     press.current = setTimeout(() => { setMenu(true); navigator.vibrate?.(10); start.current = null; }, 480);
@@ -48,26 +50,31 @@ export function MessageGestures({ mine, copyText, reactions, onReply, onReact, c
     if (horizontal.current === null && (Math.abs(mx) > 10 || Math.abs(my) > 10)) horizontal.current = Math.abs(mx) > Math.abs(my);
     if (horizontal.current) setDx(Math.max(0, Math.min(mx, 96)));
   };
-  const up = () => {
+  const reset = () => {
     clearPress();
-    if (dx >= SWIPE_TRIGGER) { onReply(); navigator.vibrate?.(8); }
     setDx(0); start.current = null; horizontal.current = null;
   };
+  const up = (e: PointerEvent) => {
+    const s = start.current;
+    if (s && s.id === e.pointerId && horizontal.current && e.clientX - s.x >= SWIPE_TRIGGER) { onReply(); navigator.vibrate?.(8); }
+    reset();
+  };
+  const firstReaction = reactions?.[0];
 
   return (
     <div className="relative">
       <Reply aria-hidden className="pointer-events-none absolute left-0 top-1/2 h-5 w-5 -translate-y-1/2 text-primary transition-opacity" style={{ opacity: Math.min(dx / SWIPE_TRIGGER, 1) }} />
       <div
-        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onPointerLeave={() => { clearPress(); if (!dx) start.current = null; }}
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={reset}
         onContextMenu={(e) => { e.preventDefault(); setMenu(true); }}
         className="message-swipe touch-pan-y select-none"
         style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: dx ? "none" : "transform 180ms ease-out" }}
       >
         {children}
       </div>
-      {reactions && reactions.length > 0 && (
+      {firstReaction && (
         <div className={`-mt-1 flex ${mine ? "justify-end" : "justify-start"}`}>
-          <Button variant="outline" size="none" onClick={() => onReact(reactions[0]!)} aria-label={`Remove reaction ${reactions[0]}`} className="h-7 min-w-9 rounded-full px-2 text-sm">{reactions.join("")}</Button>
+          <Button variant="outline" size="none" onClick={() => onReact(firstReaction)} aria-label={`Remove reaction ${firstReaction}`} className="h-7 min-w-9 rounded-full px-2 text-sm">{reactions?.join("")}</Button>
         </div>
       )}
       {menu && (
