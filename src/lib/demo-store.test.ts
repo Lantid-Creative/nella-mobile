@@ -13,9 +13,17 @@ import {
   DEMO_PIN,
   signIn,
   signUp,
+  saveKycStep,
 } from "./demo-store";
 
 describe("demo preview account and chat", () => {
+  it("resumes the active account's KYC review step without bypassing onboarding", () => {
+    localStorage.clear(); signUp("Ada Okafor", "08034648447", "1234");
+    saveKycStep(2); signIn("08034648447", "1234");
+    expect(currentUser()?.kycStep).toBe(2);
+    expect(canEnterChat(currentUser())).toBe(false);
+    expect(() => saveKycStep(3)).toThrow("Invalid setup step.");
+  });
   beforeEach(() => {
     localStorage.clear();
   });

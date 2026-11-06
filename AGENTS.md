@@ -24,3 +24,6 @@
 - Biometric unlock uses the WebAuthn platform authenticator via the shared biometrics module and covers whatever the device offers (fingerprint, face, iris, pattern) — wording always says "biometrics"/"device unlock", never fingerprint only; it only opens the demo session on this device, never replaces the payment PIN, and always keeps PIN login as the fallback.
 
 - Gate splash, login, biometric entry and chat through both demo onboarding and KYC-setup completion; incomplete or legacy accounts resume progressive KYC at /auth so navigation cannot skip it. Use sample identity/address details until secure provider verification is connected, never label demo completion as verified KYC.
+- Store only validated pre-account profile setup drafts and account-scoped KYC step checkpoints; never persist setup confirmation PINs or acknowledgments.
+- Own recording lifecycle in the shared voice-note hook; cancel pending microphone requests and active recordings on background/unmount, and transfer only reviewed audio URLs to session chat.
+- Attach breakdown edits only to the latest active review and route them through the conversational state machine; reuse prepared details with a fresh review, never approval state.

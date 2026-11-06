@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { answerPayment, startPayment } from "./chat-payments";
 
 describe("Chat-only payments", () => {
+  it("breakdown amount editing preserves the recipient, provider and narration", () => {
+    let turn = startPayment("transfer", "Send 1000 to 1212121212 GTB", "Ada");
+    if (!turn.state) throw new Error("Expected state");
+    turn = answerPayment(turn.state, "Rent", "Ada");
+    if (!turn.state) throw new Error("Expected review");
+    turn = answerPayment(turn.state, "Change amount", "Ada");
+    expect(turn.state?.field).toBe("amount");
+    if (!turn.state) throw new Error("Expected edit");
+    turn = answerPayment(turn.state, "2000", "Ada");
+    expect(turn.state?.draft).toMatchObject({ amount: "2000", destination: "1212121212", provider: "GTBank", narration: "Rent" });
+    expect(turn.state?.field).toBe("review");
+  });
   it("understands the requested bare-amount transfer and GTB alias", () => {
     const turn = startPayment("transfer", "Send 1000 to 1212121212 GTB", "Ada");
     expect(turn.state?.draft).toMatchObject({ amount: "1000", destination: "1212121212", provider: "GTBank" });
