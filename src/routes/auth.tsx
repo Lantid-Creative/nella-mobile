@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
 import { KycSetup } from "@/components/kyc-setup";
 import nellaLogo from "@/assets/nella-nav-logo.png.asset.json";
+import nellaLogoDark from "@/assets/nella-footer-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [
@@ -125,7 +126,7 @@ function AuthPage() {
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
         <header className="grid h-12 grid-cols-[minmax(0,1fr)_auto] items-center">
           <div>{mode !== "in" && step < 3 && <Button variant="ghost" size="icon" aria-label="Go back" className="h-11 w-11 rounded-full" onClick={() => { if (mode === "up" && step > 0) { setStep(step - 1); setError(""); } else switchMode("in"); }}><ArrowLeft /></Button>}</div>
-          <span className="text-2xl font-extrabold text-primary"><img src={nellaLogo.url} alt="Nella" width={697} height={178} className="h-6 w-auto" /></span>
+          <span className="text-2xl font-extrabold text-primary"><img src={nellaLogo.url} alt="Nella" width={697} height={178} className="h-6 w-auto dark:hidden" /><img src={nellaLogoDark.url} alt="Nella" width={697} height={178} className="hidden h-6 w-auto dark:block" /></span>
         </header>
         {mode === "up" && <div className="mt-4"><div className="mb-2 flex justify-between text-xs font-semibold text-muted-foreground"><span>{step < 2 ? "Your profile" : step === 2 ? "Private PIN" : step === 3 ? "Demo KYC" : "Device unlock"}</span><span>Step {step < 3 ? step + 1 : step === 3 ? 4 + kycStep : 7} of 7</span></div><div role="progressbar" aria-label="Account setup" aria-valuemin={1} aria-valuemax={7} aria-valuenow={step < 3 ? step + 1 : step === 3 ? 4 + kycStep : 7} className="flex gap-1">{[0,1,2,3,4,5,6].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= (step < 3 ? step : step === 3 ? 3 + kycStep : 6) ? "bg-primary" : "bg-border"}`} />)}</div></div>}
         <div key={`${mode}-${step}`} className="step-enter flex flex-1 flex-col justify-center py-5">
