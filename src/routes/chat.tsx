@@ -131,6 +131,7 @@ function ChatPage() {
   const reply = usePendingReply();
   const typing = reply.pending;
   const [menu, setMenu] = useState(false);
+  const theme = useTheme();
   const { panel, change: changePanel, back: panelBack, depth: panelDepth } = useServiceNavigation();
   const [payment, setPayment] = useState<PaymentConversation | null>(null);
   const [approval, setApproval] = useState<PaymentConversation | null>(null);
