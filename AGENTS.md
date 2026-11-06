@@ -27,3 +27,4 @@
 - Store only validated pre-account profile setup drafts and account-scoped KYC step checkpoints; never persist setup confirmation PINs or acknowledgments.
 - Own recording lifecycle in the shared voice-note hook; cancel pending microphone requests and active recordings on background/unmount, and transfer only reviewed audio URLs to session chat.
 - Attach breakdown edits only to the latest active review and route them through the conversational state machine; reuse prepared details with a fresh review, never approval state.
+- Theme (light/dark/phone setting) lives in the shared theme module, applied by a head boot script plus root sync; colors switch only through the .dark tokens so every screen follows it.
