@@ -231,11 +231,11 @@ function ChatPage() {
 
   const send = (raw: string, media?: ChatMedia) => {
     const t = raw.trim();
-    if (!t || reply.busy.current || !user) return false;
+    if (!t || reply.busy.current || !user) return;
     if (payment?.field === "review" && /^(?:approve(?: payment)?|confirm(?: payment)?|pay now)$/i.test(t)) {
       setText("");
       inputRef.current?.blur();
-      if (offline) { setNotice("You’re offline. Reconnect before approval. Nothing has been submitted."); return false; }
+      if (offline) { setNotice("You’re offline. Reconnect before approval. Nothing has been submitted."); return; }
       setApproval(payment);
       return;
     }

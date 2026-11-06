@@ -3,7 +3,7 @@ import { parsePaymentRequest } from "./payment-request";
 import { paymentPreview, validatePaymentDraft, type MoneyService, type PaymentDraft, type ReceiptPreview } from "./app-provisions";
 
 export type PaymentField = "provider" | "destination" | "plan" | "amount" | "narration";
-export type PaymentConversation = { draft: PaymentDraft; field: PaymentField | "review" };
+export type PaymentConversation = { draft: PaymentDraft; field: PaymentField | "review"; editing?: boolean };
 type Turn = { state: PaymentConversation | null; text: string; preview?: ReceiptPreview; choices?: string[] };
 const banks = ["GTBank", "Access Bank", "Zenith Bank", "UBA", "First Bank", "OPay", "Moniepoint", "PalmPay", "Kuda", "Wema Bank", "VFD", "Fidelity", "Sterling", "Union", "Stanbic", "FCMB"];
 const providers: Record<MoneyService, string[]> = { transfer: banks, airtime: ["MTN", "Airtel", "Glo", "9mobile"], data: ["MTN", "Airtel", "Glo", "9mobile"], electricity: ["Ikeja Electric", "Eko Electric", "Abuja Electric", "Ibadan Electric"], cable: ["DStv", "GOtv", "StarTimes"] };
@@ -68,13 +68,14 @@ export function answerPayment(state: PaymentConversation, raw: string, sender: s
   if (edit?.[1]) {
     const key = edit[1].toLowerCase();
     const field: PaymentField = key === "bank" || key === "provider" ? "provider" : ["account", "phone", "meter", "smartcard", "number"].includes(key) ? "destination" : key === "package" || key === "plan" ? "plan" : key === "narration" ? "narration" : "amount";
-    const updated = { ...state, field };
+    const updated = { ...state, field, editing: true };
     return edit[2] ? answerPayment(updated, edit[2], sender, customerPhone) : { state: updated, text: questions(state.draft)[field], choices: choices(updated) };
   }
   if (state.field === "review") return { state, text: "Payments aren’t connected yet. You can edit these details or cancel. No payment has been submitted.", choices: choices(state) };
   const draft = { ...state.draft };
   if (state.field !== "narration") {
-    const details = parsePaymentRequest(draft.service, text, customerPhone);
+    const extracted = parsePaymentRequest(draft.service, text, customerPhone);
+    const details = state.editing ? (extracted[state.field] ? { [state.field]: extracted[state.field] } : {}) : extracted;
     // A standalone numeric reply belongs to the field currently being asked.
     if (state.field !== "amount" && /^\d+(?:\.\d+)?$/.test(text)) delete details.amount;
     if (Object.keys(details).length) {
@@ -83,7 +84,7 @@ export function answerPayment(state: PaymentConversation, raw: string, sender: s
         ? "Please send an amount greater than zero."
         : (draft.service === "transfer" || draft.service === "electricity") && Number(draft.amount) < 100 ? "The minimum amount is ₦100." : "");
       if (amountError) return { state: { draft: { ...draft, amount: "" }, field: "amount" }, text: `${amountError} How much in naira?` };
-      return next(draft, sender);
+      return next(draft, sender, state.editing === true);
     }
   }
   let error = "";
