@@ -96,6 +96,37 @@
   --shadow-lip: 0 3px 0 0 var(--primary-deep);
 }
 
+.dark {
+  --background: oklch(0.16 0.025 264);
+  --foreground: oklch(0.95 0.01 250);
+  --card: oklch(0.21 0.03 264);
+  --card-foreground: oklch(0.95 0.01 250);
+  --popover: oklch(0.21 0.03 264);
+  --popover-foreground: oklch(0.95 0.01 250);
+  --primary: oklch(0.66 0.19 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.26 0.04 264);
+  --secondary-foreground: oklch(0.95 0.01 250);
+  --muted: oklch(0.25 0.03 264);
+  --muted-foreground: oklch(0.72 0.03 255);
+  --accent: oklch(0.29 0.05 264);
+  --accent-foreground: oklch(0.95 0.01 250);
+  --border: oklch(0.3 0.03 264);
+  --input: oklch(0.34 0.03 264);
+  --gradient-hero: linear-gradient(180deg, var(--secondary), var(--background) 48%);
+}
+
+/* WhatsApp-style doodles behind the conversation; tinted by the theme. */
+.chat-doodles { position: relative; isolation: isolate; }
+.chat-doodles::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-color: var(--foreground); opacity: 0.05;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='24' cy='26' r='12'/%3E%3Cpath d='M18 26h12M24 20v12'/%3E%3Crect x='70' y='14' width='30' height='20' rx='4'/%3E%3Cpath d='M70 22h30'/%3E%3Cpath d='M140 14l-6 14h10l-6 14'/%3E%3Cpath d='M20 80c6-10 18-10 24 0'/%3E%3Ccircle cx='26' cy='74' r='1.5'/%3E%3Ccircle cx='38' cy='74' r='1.5'/%3E%3Crect x='80' y='64' width='16' height='26' rx='3'/%3E%3Cpath d='M86 84h4'/%3E%3Cpath d='M128 70h28l-4 18h-20z'/%3E%3Ccircle cx='134' cy='94' r='2'/%3E%3Ccircle cx='150' cy='94' r='2'/%3E%3Cpath d='M18 130h24v20H18zM18 136l12 7 12-7'/%3E%3Cpath d='M78 140a10 10 0 1 0 20 0a10 10 0 1 0 -20 0M88 132v16M84 136h6a2 2 0 0 1 0 4h-4a2 2 0 0 0 0 4h6'/%3E%3Cpath d='M136 128l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='24' cy='26' r='12'/%3E%3Cpath d='M18 26h12M24 20v12'/%3E%3Crect x='70' y='14' width='30' height='20' rx='4'/%3E%3Cpath d='M70 22h30'/%3E%3Cpath d='M140 14l-6 14h10l-6 14'/%3E%3Cpath d='M20 80c6-10 18-10 24 0'/%3E%3Ccircle cx='26' cy='74' r='1.5'/%3E%3Ccircle cx='38' cy='74' r='1.5'/%3E%3Crect x='80' y='64' width='16' height='26' rx='3'/%3E%3Cpath d='M86 84h4'/%3E%3Cpath d='M128 70h28l-4 18h-20z'/%3E%3Ccircle cx='134' cy='94' r='2'/%3E%3Ccircle cx='150' cy='94' r='2'/%3E%3Cpath d='M18 130h24v20H18zM18 136l12 7 12-7'/%3E%3Cpath d='M78 140a10 10 0 1 0 20 0a10 10 0 1 0 -20 0M88 132v16M84 136h6a2 2 0 0 1 0 4h-4a2 2 0 0 0 0 4h6'/%3E%3Cpath d='M136 128l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z'/%3E%3C/svg%3E");
+  -webkit-mask-size: 180px 180px; mask-size: 180px 180px;
+}
+.dark .chat-doodles::before { opacity: 0.07; }
+
 @layer base {
   * {
     border-color: var(--color-border);
