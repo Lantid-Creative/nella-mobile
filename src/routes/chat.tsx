@@ -5,6 +5,9 @@ import {
   ArrowUp,
   ArrowDown,
   Bell,
+  Sun,
+  Moon,
+  Smartphone,
   CalendarClock,
   Camera,
   ChevronRight,
@@ -55,6 +58,8 @@ import { STORAGE_NOTICE } from "@/lib/demo-storage";
 import { answerPayment, startPayment, paymentService, type PaymentConversation } from "@/lib/chat-payments";
 import { SERVICE_LABELS, type PaymentDraft } from "@/lib/app-provisions";
 import nellaLogo from "@/assets/nella-nav-logo.png.asset.json";
+import nellaLogoDark from "@/assets/nella-footer-logo.png.asset.json";
+import { useTheme, type ThemeChoice } from "@/lib/theme";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -390,8 +395,8 @@ function ChatPage() {
         setChatChoices([]);
         nellaSays([{ text: "Demo PIN checked. No payment was submitted and no money moved. Live payment approval is not connected yet." }], 300);
       }} />}
-      <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <img src={nellaLogo.url} alt="Nella" width={697} height={178} className="h-7 w-auto shrink-0" />
+      <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 bg-background px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <img src={(theme.dark ? nellaLogoDark : nellaLogo).url} alt="Nella" width={697} height={178} className="h-7 w-auto shrink-0" />
         <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground" aria-label="Notifications" title="Notifications" onClick={() => setPanel("notifications")}><Bell /></Button>
         <Button variant="plain" size="none"
           onClick={() => {
@@ -416,6 +421,15 @@ function ChatPage() {
               </div>
             </div>
             <div className="my-3 h-px bg-border" />
+            <div className="mb-2">
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">Appearance</p>
+              <div role="radiogroup" aria-label="Appearance" className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+                {([["light", "Light", Sun], ["dark", "Dark", Moon], ["system", "Phone", Smartphone]] as [ThemeChoice, string, typeof Sun][]).map(([value, label, Icon]) => (
+                  <Button key={value} type="button" role="radio" aria-checked={theme.choice === value} variant={theme.choice === value ? "secondary" : "ghost"} className={`h-11 gap-1.5 text-xs ${theme.choice === value ? "bg-card shadow-sm" : ""}`} onClick={() => theme.setChoice(value)}><Icon className="h-4 w-4" />{label}</Button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">Phone follows your phone's light or dark setting.</p>
+            </div>
             <ProfileAction icon={Wallet} label="Account & funding" onClick={() => { setMenu(false); setPanel("account"); }} />
             <ProfileAction icon={Shield} label="Complete account setup" onClick={() => { setMenu(false); setPanel("onboarding"); }} />
             <ProfileAction
@@ -505,7 +519,7 @@ function ChatPage() {
       <main
         ref={scrollRef}
         onScroll={event => { followsBottom.current = isNearConversationBottom(event.currentTarget); if (followsBottom.current) setNewMessages(false); }}
-        className="mx-auto min-h-0 w-full max-w-2xl flex-1 overflow-y-auto overscroll-contain px-4 sm:px-5"
+        className="chat-doodles mx-auto min-h-0 w-full max-w-2xl flex-1 overflow-y-auto overscroll-contain px-4 sm:px-5"
         onClick={() => setMenu(false)}
       >
         {empty ? (
