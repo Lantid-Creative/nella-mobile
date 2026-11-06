@@ -4,6 +4,27 @@ import { useVoiceNote } from "./use-voice-note";
 
 afterEach(() => vi.restoreAllMocks());
 describe("voice interruption safety", () => {
+  it("does not publish a review after an active recording is unmounted", async () => {
+    const track = { stop: vi.fn(), addEventListener: vi.fn() };
+    let active: { onstop?: () => void; state: string; stop: () => void } | undefined;
+    const createUrl = vi.fn();
+    vi.stubGlobal("MediaRecorder", class {
+      static isTypeSupported() { return true; }
+      state = "inactive"; mimeType = "audio/webm"; onstop?: () => void;
+      constructor(public stream: MediaStream) { active = this; }
+      start() { this.state = "recording"; }
+      stop() { this.state = "inactive"; }
+    });
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createUrl });
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: async () => ({ getTracks: () => [track], getAudioTracks: () => [track] }) } });
+    const { result, unmount } = renderHook(() => useVoiceNote(vi.fn()));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.mode).toBe("recording");
+    unmount(); active?.onstop?.();
+    expect(track.stop).toHaveBeenCalled();
+    expect(createUrl).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
   it("stops a microphone granted after the gesture has been cancelled", async () => {
     let resolve: (stream: MediaStream) => void = () => undefined;
     const track = { stop: vi.fn() };
