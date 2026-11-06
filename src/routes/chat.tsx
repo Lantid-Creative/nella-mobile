@@ -138,8 +138,9 @@ function ChatPage() {
   const fromProfile = useRef(false);
   const [profileFull, setProfileFull] = useState(false);
   const dragStart = useRef<number | null>(null);
+  const draggedProfile = useRef(false);
   useEffect(() => { if (panel === null && fromProfile.current) { fromProfile.current = false; setMenu(true); } }, [panel]);
-  useEffect(() => { if (!menu) setProfileFull(false); }, [menu]);
+  useEffect(() => { if (!menu && !fromProfile.current) setProfileFull(false); }, [menu]);
   const openFromProfile = (next: AppPanel) => { setMenu(false); fromProfile.current = true; setPanel(next); };
   const closePanel = (next: AppPanel | null) => { if (next === null) fromProfile.current = false; setPanel(next); };
   const setPanel = (next: AppPanel | null) => {
@@ -418,14 +419,16 @@ function ChatPage() {
           <span className="text-sm font-bold text-primary">{first.slice(0,1)}</span>
         </Button>
         <Dialog open={menu} onOpenChange={setMenu}>
-          <DialogContent style={{ height: profileFull ? "calc(var(--app-height,100dvh) - 1rem)" : "min(55%, calc(var(--app-height,100dvh) * 0.55))" }} onScroll={event => { if (!profileFull && event.currentTarget.scrollTop > 24) setProfileFull(true); }} className="nella-profile bottom-0 left-0 top-auto max-h-[calc(var(--app-height,100dvh)-1rem)] overflow-y-auto translate-x-0 translate-y-0 rounded-t-2xl px-6 pb-6 pt-0 transition-[height] duration-300 sm:h-auto sm:pt-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl">
-            <div role="button" tabIndex={0} aria-label={profileFull ? "Show less" : "Show more"} className="sticky top-0 z-10 -mx-6 flex h-8 cursor-grab touch-none items-center justify-center bg-background sm:hidden"
-              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") setProfileFull(f => !f); }}
-              onClick={() => setProfileFull(f => !f)}
-              onPointerDown={event => { dragStart.current = event.clientY; }}
+          <DialogContent showCloseButton={false} className={`nella-profile ${profileFull ? "nella-profile-expanded" : ""} bottom-0 left-0 top-auto flex max-h-[calc(var(--app-height,100dvh)-1rem)] flex-col gap-0 overflow-hidden translate-x-0 translate-y-0 rounded-t-2xl p-0 transition-[height] duration-300 motion-reduce:transition-none sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl`}>
+            <Button variant="ghost" size="none" aria-label={profileFull ? "Show less" : "Show more"} aria-expanded={profileFull} className="flex h-11 w-full shrink-0 cursor-grab touch-none items-center justify-center rounded-none bg-background sm:hidden"
+              onClick={() => { if (!draggedProfile.current) setProfileFull(f => !f); draggedProfile.current = false; }}
+              onPointerDown={event => { dragStart.current = event.clientY; draggedProfile.current = false; event.currentTarget.setPointerCapture(event.pointerId); }}
+              onPointerMove={event => { if (dragStart.current !== null && Math.abs(event.clientY - dragStart.current) > 8) draggedProfile.current = true; }}
+              onPointerCancel={() => { dragStart.current = null; draggedProfile.current = true; }}
               onPointerUp={event => { const start = dragStart.current; dragStart.current = null; if (start === null) return; const dy = event.clientY - start; if (dy < -30) setProfileFull(true); else if (dy > 40) { if (profileFull) setProfileFull(false); else setMenu(false); } }}>
               <span className="h-1.5 w-10 rounded-full bg-muted-foreground/40" />
-            </div>
+            </Button>
+            <div onScroll={event => { if (!profileFull && event.currentTarget.scrollTop > 24) setProfileFull(true); }} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pt-6">
             <DialogTitle>Your profile</DialogTitle>
             <DialogDescription>Manage your Nella demo account.</DialogDescription>
             <div className="flex items-start justify-between">
@@ -509,6 +512,7 @@ function ChatPage() {
             >
               Log out
             </Button></div></div>}
+            </div>
           </DialogContent>
         </Dialog>
       </header>
