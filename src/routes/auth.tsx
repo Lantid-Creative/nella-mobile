@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ScanFace, LockKeyhole, ShieldCheck, Check } from "lucide-react";
-import { canEnterChat, completeDemoKyc, completeOnboarding, currentUser, normalisePhone, resetDemoPin, signIn, signInVerified, signUp } from "@/lib/demo-store";
+import { canEnterChat, completeDemoKyc, completeOnboarding, currentUser, normalisePhone, resetDemoPin, saveKycStep, signIn, signInVerified, signUp } from "@/lib/demo-store";
+import { formatPhone, loginPinReady, readSetupDraft, saveSetupDraft, clearSetupDraft } from "@/lib/mobile-ux";
 import { biometricPhone, biometricsAvailable, enableBiometrics, unlockWithBiometrics } from "@/lib/biometrics";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
@@ -32,18 +33,26 @@ function AuthPage() {
   const [success, setSuccess] = useState("");
   const [bioPhone, setBioPhone] = useState<string | null>(null);
   const [bioBusy, setBioBusy] = useState(false);
+  const [kycStep, setKycStep] = useState(0);
+  const [draftReady, setDraftReady] = useState(false);
+  const restoreUser = (user: NonNullable<ReturnType<typeof currentUser>>) => {
+    setName(user.name); setPhone(formatPhone(user.phone)); setMode("up"); setKycStep(user.kycStep ?? 0); setStep(user.kycSetupComplete ? 4 : 3); setPin(""); setPin2("");
+  };
   const resumeAccount = () => {
     const user = currentUser();
     if (canEnterChat(user)) { navigate({ to: "/chat", replace: true }); return; }
-    if (user) { setName(user.name); setPhone(user.phone); setMode("up"); setStep(3); setPin(""); setPin2(""); }
+    if (user) restoreUser(user);
   };
   useEffect(() => {
     const user = currentUser();
     if (canEnterChat(user)) navigate({ to: "/chat", replace: true });
-    else if (user) { setName(user.name); setPhone(user.phone); setMode("up"); setStep(3); }
+    else if (user) restoreUser(user);
+    else { const draft = readSetupDraft(); if (draft) { setName(draft.name); setPhone(draft.phone); setMode("up"); setStep(draft.step); } }
+    setDraftReady(true);
   }, [navigate]);
+  useEffect(() => { if (draftReady && mode === "up" && step < 3) { if (!saveSetupDraft({ name, phone, step })) setError("Your browser couldn’t save setup progress. Keep this page open."); } }, [draftReady, mode, step, name, phone]);
   useEffect(() => { void biometricsAvailable().then((ok) => { if (ok) setBioPhone(biometricPhone()); }); }, []);
-  const switchMode = (next: typeof mode) => { setMode(next); setStep(0); setPin(""); setPin2(""); setError(""); setSuccess(""); };
+  const switchMode = (next: typeof mode) => { setMode(next); const draft = next === "up" ? readSetupDraft() : null; setStep(draft?.step ?? 0); if (draft) { setName(draft.name); setPhone(draft.phone); } setPin(""); setPin2(""); setError(""); setSuccess(""); };
   const unlock = async () => {
     setBioBusy(true); setError("");
     const unlocked = await unlockWithBiometrics();
@@ -75,6 +84,16 @@ function AuthPage() {
     } catch (err) { setError(err instanceof Error ? err.message : "Biometric setup failed. Your PIN still works."); }
     finally { setBioBusy(false); }
   };
+  const login = (value: string) => {
+    setError("");
+    try { signIn(phone, value); setPin(""); resumeAccount(); }
+    catch (err) { setPin(""); setError(err instanceof Error ? err.message : "Couldn’t log in. Try again."); }
+  };
+  useEffect(() => {
+    const clearPrivate = () => { if (document.hidden) { setPin(""); setPin2(""); setShowPin(false); } };
+    document.addEventListener("visibilitychange", clearPrivate);
+    return () => document.removeEventListener("visibilitychange", clearPrivate);
+  }, []);
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setError(""); setSuccess("");
     try {
@@ -90,11 +109,11 @@ function AuthPage() {
       if (mode === "up") {
         if (pin !== pin2) throw new Error("The two PINs don't match.");
         signUp(name, phone, pin);
-        setPin(""); setPin2(""); setStep(3);
+        clearSetupDraft(); setPin(""); setPin2(""); setKycStep(0); setStep(3);
       } else if (mode === "reset") {
         if (pin !== pin2) throw new Error("The two PINs don't match.");
         resetDemoPin(phone, pin); switchMode("in"); setSuccess("Your demo PIN has been reset in this browser. You can log in now.");
-      } else { signIn(phone, pin); resumeAccount(); }
+      } else { login(pin); }
     } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong. Try again."); }
   };
   const field = "h-13 w-full min-w-0 rounded-xl border border-input bg-card px-4 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/10";
@@ -108,9 +127,9 @@ function AuthPage() {
           <div>{mode !== "in" && step < 3 && <Button variant="ghost" size="icon" aria-label="Go back" className="h-11 w-11 rounded-full" onClick={() => { if (mode === "up" && step > 0) { setStep(step - 1); setError(""); } else switchMode("in"); }}><ArrowLeft /></Button>}</div>
           <span className="text-2xl font-extrabold text-primary"><img src={nellaLogo.url} alt="Nella" width={697} height={178} className="h-6 w-auto" /></span>
         </header>
-        {mode === "up" && <div aria-label={`Setup step ${Math.min(step, 3) + 1} of 4`} className="mt-4 flex gap-2">{[0,1,2,3].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-border"}`} />)}</div>}
+        {mode === "up" && <div className="mt-4"><div className="mb-2 flex justify-between text-xs font-semibold text-muted-foreground"><span>{step < 2 ? "Your profile" : step === 2 ? "Private PIN" : step === 3 ? "Demo KYC" : "Device unlock"}</span><span>Step {step < 3 ? step + 1 : step === 3 ? 4 + kycStep : 7} of 7</span></div><div role="progressbar" aria-label="Account setup" aria-valuemin={1} aria-valuemax={7} aria-valuenow={step < 3 ? step + 1 : step === 3 ? 4 + kycStep : 7} className="flex gap-1">{[0,1,2,3,4,5,6].map(s => <span key={s} className={`h-1 flex-1 rounded-full ${s <= (step < 3 ? step : step === 3 ? 3 + kycStep : 6) ? "bg-primary" : "bg-border"}`} />)}</div></div>}
         <div key={`${mode}-${step}`} className="step-enter flex flex-1 flex-col justify-center py-5">
-          {mode === "up" && step === 3 ? <KycSetup name={name} phone={normalisePhone(phone) ?? phone} error={error} onComplete={() => void finishKyc()} /> : mode === "up" && step === 4 ? <div className="flex flex-1 flex-col justify-center">
+          {mode === "up" && step === 3 ? <KycSetup name={name} phone={normalisePhone(phone) ?? phone} step={kycStep} onStepChange={next => { try { saveKycStep(next); setKycStep(next); setError(""); } catch { setError("Couldn’t save your progress. Please try again."); } }} error={error} onComplete={() => void finishKyc()} /> : mode === "up" && step === 4 ? <div className="flex flex-1 flex-col justify-center">
             <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-secondary"><ScanFace className="h-14 w-14 text-primary" /></div>
             <h1 className="mt-6 text-[28px] font-extrabold leading-tight">Unlock with biometrics.</h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Next time you open Nella, use your phone's own unlock method — fingerprint, face or pattern — instead of your PIN. Your payment PIN stays separate and is never replaced.</p>
@@ -132,14 +151,14 @@ function AuthPage() {
               <div className="border-t border-border pt-4"><p className="flex items-center gap-2 text-xs font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> When live account opening is available</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">You'll verify your NIN, BVN, date of birth and home address in a secure form. Don't send these details in chat. Identity verification isn't connected yet.</p></div>
             </div> : <>
               {mode === "up" && step === 1 && <label className="block space-y-2"><span className="text-sm font-semibold">Full name</span><input autoFocus className={field} required autoComplete="name" placeholder="First and last name" value={name} onChange={e => setName(e.target.value)} /></label>}
-              {(mode !== "up" || step === 1) && <label className="block space-y-2"><span className="text-sm font-semibold">Phone number</span><div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2"><span className="flex items-center rounded-xl border border-input bg-secondary px-3 text-sm font-semibold">+234</span><input aria-label="Phone number" className={field} inputMode="tel" autoComplete="tel-national" required placeholder="801 234 5678" value={phone} onChange={e => setPhone(e.target.value)} /></div></label>}
+              {(mode !== "up" || step === 1) && <label className="block space-y-2"><span className="text-sm font-semibold">Phone number</span><div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2"><span className="flex items-center rounded-xl border border-input bg-secondary px-3 text-sm font-semibold">+234</span><input aria-label="Phone number" className={field} inputMode="tel" autoComplete="tel-national" required placeholder="801 234 5678" value={phone} onChange={e => { setPhone(formatPhone(e.target.value)); setError(""); }} /></div></label>}
               {(mode !== "up" || step === 2) && <>
-                <label className="block space-y-2"><span className="text-sm font-semibold">{mode === "in" ? "Demo PIN" : "Create demo PIN"}</span><div className="relative"><input aria-label={mode === "in" ? "Demo PIN" : "Create demo PIN"} autoFocus={mode === "up"} className={`${field} pr-12 text-center tabular-nums`} type={showPin ? "text" : "password"} inputMode="numeric" autoComplete={mode === "in" ? "current-password" : "new-password"} maxLength={4} minLength={4} required placeholder="4-digit PIN" value={pin} onChange={e => setPin(digits(e.target.value))} /><Button type="button" variant="ghost" size="icon" aria-label={showPin ? "Hide PIN" : "Show PIN"} className="absolute right-1 top-1 h-11 w-11 text-muted-foreground" onClick={() => setShowPin(!showPin)}>{showPin ? <EyeOff /> : <Eye />}</Button></div></label>
+                <label className="block space-y-2"><span className="text-sm font-semibold">{mode === "in" ? "Demo PIN" : "Create demo PIN"}</span><div className="relative"><input aria-label={mode === "in" ? "Demo PIN" : "Create demo PIN"} aria-invalid={Boolean(error)} aria-describedby={error ? "auth-error" : undefined} autoFocus={mode === "up"} className={`${field} pr-12 text-center tabular-nums`} type={showPin ? "text" : "password"} inputMode="numeric" autoComplete={mode === "in" ? "current-password" : "new-password"} maxLength={4} minLength={4} required placeholder="4-digit PIN" value={pin} onChange={e => { const value = digits(e.target.value); setPin(value); setError(""); if (mode === "in" && loginPinReady(phone, value)) login(value); }} /><Button type="button" variant="ghost" size="icon" aria-label={showPin ? "Hide PIN" : "Show PIN"} className="absolute right-1 top-1 h-11 w-11 text-muted-foreground" onClick={() => setShowPin(!showPin)}>{showPin ? <EyeOff /> : <Eye />}</Button></div></label>
                 {mode !== "in" && <label className="block space-y-2"><span className="text-sm font-semibold">Confirm demo PIN</span><input className={`${field} text-center tabular-nums`} type={showPin ? "text" : "password"} inputMode="numeric" autoComplete="new-password" maxLength={4} minLength={4} required placeholder="Enter your PIN again" value={pin2} onChange={e => setPin2(digits(e.target.value))} /></label>}
                 {mode === "in" && <div className="flex justify-end"><Button type="button" variant="link" className="h-11 px-0 text-sm" onClick={() => switchMode("reset")}>Forgot demo PIN?</Button></div>}
               </>}
             </>}
-            {error && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+            {error && <p id="auth-error" role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
             {success && <p role="status" className="flex items-start gap-2 text-sm text-primary"><Check className="h-5 w-5 shrink-0" />{success}</p>}
             <Button type="submit" className="h-13 w-full rounded-xl font-bold shadow-glow">{mode === "in" ? "Log in" : mode === "reset" ? "Reset demo PIN" : step === 0 ? "Let's get started" : step === 1 ? "Continue" : step === 2 ? "Create demo account" : "Complete setup"}<ArrowRight /></Button>
             {mode === "in" && bioPhone && <Button type="button" variant="outline" className="h-13 w-full rounded-xl font-bold" disabled={bioBusy} onClick={() => void unlock()}><ScanFace className="text-primary" />{bioBusy ? "Waiting for your device…" : "Unlock with biometrics"}</Button>}
