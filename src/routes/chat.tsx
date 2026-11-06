@@ -129,20 +129,17 @@ function ChatPage() {
   const [swipeTip, setSwipeTip] = useState(false);
   const reply = usePendingReply();
   const typing = reply.pending;
-  const [menu, setMenu] = useState(false);
   const theme = useTheme();
-  const { panel, change: changePanel, back: panelBack, depth: panelDepth } = useServiceNavigation();
+  const { panel, change: changePanel, back: panelBack, depth: panelDepth, menu, setMenu } = useServiceNavigation();
   const [payment, setPayment] = useState<PaymentConversation | null>(null);
   const [approval, setApproval] = useState<PaymentConversation | null>(null);
   const [chatChoices, setChatChoices] = useState<string[]>([]);
-  const fromProfile = useRef(false);
   const [profileFull, setProfileFull] = useState(false);
   const dragStart = useRef<number | null>(null);
   const draggedProfile = useRef(false);
-  useEffect(() => { if (panel === null && fromProfile.current) { fromProfile.current = false; setMenu(true); } }, [panel]);
-  useEffect(() => { if (!menu && !fromProfile.current) setProfileFull(false); }, [menu]);
-  const openFromProfile = (next: AppPanel) => { setMenu(false); fromProfile.current = true; setPanel(next); };
-  const closePanel = (next: AppPanel | null) => { if (next === null) fromProfile.current = false; setPanel(next); };
+  useEffect(() => { if (!menu && panel === null) setProfileFull(false); }, [menu, panel]);
+  const openFromProfile = (next: AppPanel) => setPanel(next);
+  const closePanel = (next: AppPanel | null) => setPanel(next);
   const setPanel = (next: AppPanel | null) => {
     if (next && (next in SERVICE_LABELS || next === "services")) {
       changePanel(null);
@@ -408,7 +405,7 @@ function ChatPage() {
         <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground" aria-label="Notifications" title="Notifications" onClick={() => setPanel("notifications")}><Bell /></Button>
         <Button variant="plain" size="none"
           onClick={() => {
-            setMenu((m) => !m);
+            setMenu(!menu);
             setConfirmClear(false);
             setConfirmLogout(false);
           }}
