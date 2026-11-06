@@ -7,7 +7,6 @@ import {
   Bell,
   Sun,
   Moon,
-  Smartphone,
   CalendarClock,
   Camera,
   ChevronRight,
