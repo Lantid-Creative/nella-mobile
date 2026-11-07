@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme } from "expo";
 import { resolveTheme, type NellaTheme, type ThemeName } from "./theme";
 
 const KEY = "nella.theme";
