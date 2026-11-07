@@ -33,7 +33,7 @@ export default function SplashScreen() {
 
         <View style={styles.dots}>
           {[0, 1, 2].map((i) => (
-            <View key={i} style={[styles.dot, { animationDelay: `${i * 160}ms` }]} />
+            <View key={i} style={[styles.dot]} />
           ))}
         </View>
       </View>

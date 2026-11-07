@@ -348,7 +348,7 @@ export default function ChatPage() {
   const previews = msgs.flatMap((m) => (m.card?.kind === "preview" ? [m.card.preview] : []));
   const lastPrepared = [...previews]
     .reverse()
-    .map((p) => draftFromPreview(p))
+    .map((p) => draftFromPreview(p as ReceiptPreview))
     .find((d) => d !== null);
   const first = user?.name.split(" ")[0] || "there";
   const empty = msgs.length === 0;
@@ -477,7 +477,7 @@ export default function ChatPage() {
                           <Text style={s.balanceValue}>Your wallet balance is currently unavailable.</Text>
                         </View>
                       )}
-                      {m.card?.kind === "preview" && (
+                      {m.card?.kind === "preview" && m.card.preview && (
                         <PaymentPreviewCard theme={theme} receipt={m.card.preview} onEdit={() => {}} />
                       )}
                       {m.card?.kind === "narration" && !m.card.done && ((m.card as any).pending) && (
@@ -545,7 +545,7 @@ export default function ChatPage() {
         </TouchableOpacity>
       )}
 
-      <NellaServices theme={theme} panel={panel} onChange={setPanel} onBack={() => {}} depth={0} user={user!} previews={previews} onReuse={reuse} />
+      <NellaServices theme={theme} panel={panel} onChange={setPanel} onBack={() => {}} depth={0} user={user!} previews={previews.filter((p): p is ReceiptPreview => p !== undefined)} onReuse={reuse} />
 
       <View style={s.composer}>
         {pendingPhoto && (

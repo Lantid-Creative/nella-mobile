@@ -16,7 +16,8 @@
       "bundleIdentifier": "creative.lantid.nella",
       "infoPlist": {
         "NSCameraUsageDescription": "Nella needs camera access to let you snap photos of bills and payments.",
-        "NSMicrophoneUsageDescription": "Nella needs microphone access to record and send voice notes."
+        "NSMicrophoneUsageDescription": "Nella needs microphone access to record and send voice notes.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
