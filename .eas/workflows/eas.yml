@@ -8,19 +8,9 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    name: Build and submit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Configure EAS
-        run: npx eas-cli@latest --version
-
-      - name: Build iOS
-        run: npx eas-cli@latest build --platform ios --profile development --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  ios_development_build:
+    name: Build iOS development client
+    type: build
+    params:
+      platform: ios
+      profile: development
