@@ -3,9 +3,9 @@
 name: Nella CI
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   push:
-    branches: [main, expo-migration]
+    branches: [main]
 
 jobs:
   build:
@@ -16,13 +16,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: ./expo-native
 
       - name: Configure EAS
         run: npx eas-cli@latest --version
 
-      - name: Build Android
-        run: npx eas-cli@latest build --platform android --profile development --non-interactive --auto-submit
-        working-directory: ./expo-native
+      - name: Build iOS
+        run: npx eas-cli@latest build --platform ios --profile development --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
