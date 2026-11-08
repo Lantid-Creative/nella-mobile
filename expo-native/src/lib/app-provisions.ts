@@ -52,6 +52,7 @@ export type PaymentDraft = {
   provider: string;
   narration: string;
   plan: string;
+  reference?: string;
 };
 
 export function validatePaymentDraft(draft: PaymentDraft): string | null {
@@ -74,6 +75,7 @@ export type ReceiptPreview = {
   title: string;
   amount: number;
   rows: [string, string][];
+  reference?: string;
 };
 
 export function paymentPreview(draft: PaymentDraft, sender: string): ReceiptPreview {

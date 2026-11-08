@@ -3,7 +3,7 @@ import { parsePaymentRequest } from './payment-request';
 import { paymentPreview, validatePaymentDraft, type MoneyService, type PaymentDraft, type ReceiptPreview } from './app-provisions';
 
 export type PaymentField = 'provider' | 'destination' | 'plan' | 'amount' | 'narration';
-export type PaymentDraft = { service: MoneyService; amount: string; destination: string; provider: string; narration: string; plan: string };
+export type PaymentDraft = { service: MoneyService; amount: string; destination: string; provider: string; narration: string; plan: string; reference?: string };
 export type PaymentConversation = { draft: PaymentDraft; field: PaymentField | 'review'; editing?: boolean };
 type Turn = { state: PaymentConversation | null; text: string; preview?: ReceiptPreview; choices?: string[] };
 
@@ -61,7 +61,7 @@ function next(draft: PaymentDraft, sender: string, narrationDone = false): Turn 
 }
 
 export function startPayment(service: MoneyService, raw: string, sender: string, seed?: PaymentDraft, customerPhone?: string): Turn {
-  const draft: PaymentDraft = seed ? { ...seed } : { service, provider: '', destination: '', plan: '', amount: '', narration: '' };
+  const draft: PaymentDraft = seed ? { ...seed } : { service, provider: '', destination: '', plan: '', amount: '', narration: '', reference: `${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).toUpperCase().slice(0, 4)}` };
   const parsed = demoReply(raw).flatMap((part) => (part.card?.kind === 'approval' ? [part.card] : part.card?.kind === 'narration' ? [part.card.pending] : []))[0];
   if (parsed && parsed.service === service) Object.assign(draft, { amount: String(parsed.amount), provider: parsed.bank, destination: parsed.account });
   if (!seed) {

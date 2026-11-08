@@ -1,6 +1,6 @@
 /**
- * Transfer API layer for the Nella mobile app.
- * Connects to the live backend's transfer engine (src/lib/transfers.ts).
+ * Payment API layer for the Nella mobile app.
+ * Connects to the live backend's payment endpoints at /api/mobile/.
  */
 
 import { post, get, NellaApiError } from './api-client';
@@ -55,7 +55,7 @@ export interface ExecuteResult {
  */
 export async function quoteTransfer(draft: TransferQuote): Promise<QuoteResponse> {
   try {
-    const res = await post<QuoteResponse>('/transfer/quote', draft, { auth: true });
+    const res = await post<QuoteResponse>('/api/mobile/transfer/quote', draft, { auth: true });
     return res;
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
@@ -65,11 +65,18 @@ export async function quoteTransfer(draft: TransferQuote): Promise<QuoteResponse
 
 /**
  * Execute a approved transfer (PIN already checked on the approval screen).
- * Body: { reference, pin }
+ * Body: { phone, pin, reference, amountMinor, toAccount, toBank, toName?, narration? }
  */
-export async function executeTransfer(reference: string, pin: string): Promise<ExecuteResult> {
+export async function executeTransfer(phone: string, pin: string, pending: {
+  reference: string;
+  amountMinor: number;
+  toAccount: string;
+  toBank: string;
+  toName?: string;
+  narration?: string;
+}, skipPin?: boolean): Promise<ExecuteResult> {
   try {
-    const res = await post<ExecuteResult>('/transfer/execute', { reference, pin }, { auth: true });
+    const res = await post<ExecuteResult>('/api/mobile/transfer/execute', { phone, pin, ...pending }, { auth: true });
     return res;
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
