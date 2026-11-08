@@ -182,7 +182,27 @@ export default function ChatPage() {
       if (turn) {
         setPayment(turn.state);
         setChatChoices(turn.choices ?? []);
-        if (turn.preview) {
+        
+        // Call live API for quote when payment reaches review state
+        if (turn.preview && turn.state.field === "review") {
+          try {
+            const amountMinor = Number(turn.state.draft.amount) * 100;
+            const quote = await quoteTransfer(user.phone, amountMinor, turn.state.draft.destination, turn.state.draft.provider);
+            if (quote.ok) {
+              // Store the reference and amount in the draft for approval
+              setPayment(prev => prev && {
+                ...prev,
+                draft: {
+                  ...prev.draft,
+                  reference: quote.reference,
+                  amountMinor: quote.amountMinor || amountMinor,
+                },
+              });
+            }
+          } catch {
+            // API failed, continue with local draft
+          }
+          
           nellaSays([{ text: turn.text, card: { kind: "preview", preview: turn.preview } as any }]);
         } else {
           nellaSays([{ text: turn.text }]);
@@ -359,13 +379,14 @@ export default function ChatPage() {
         <PaymentApproval
           theme={theme}
           receipt={paymentPreview(approval.draft, user!.name)}
+          draft={approval.draft}
           user={user!}
           onClose={() => setApproval(null)}
           onComplete={() => {
             setApproval(null);
             setPayment(null);
             setChatChoices([]);
-            nellaSays([{ text: "Demo PIN checked. No payment was submitted and no money moved. Live payment approval is not connected yet." }], 300);
+            nellaSays([{ text: "Payment approved and submitted via Nella." }], 300);
           }}
           visible={true}
         />

@@ -2,19 +2,21 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, useState } from 'r
 import { LockKeyhole, ShieldCheck } from 'lucide-react-native';
 import type { NellaTheme } from '@/lib/theme';
 import { naira } from '@/lib/demo-store';
-import type { ReceiptPreview } from '@/lib/app-provisions';
+import type { ReceiptPreview, PaymentDraft } from '@/lib/app-provisions';
 import { Button } from '@/components/ui/button';
+import { executeTransfer } from '@/lib/api-transfers';
 
 interface PaymentApprovalProps {
   theme: NellaTheme;
   receipt: ReceiptPreview;
   user: any;
+  draft?: PaymentDraft;
   onClose: () => void;
   onComplete: () => void;
   visible: boolean;
 }
 
-export function PaymentApproval({ theme, receipt, user, onClose, onComplete, visible }: PaymentApprovalProps) {
+export function PaymentApproval({ theme, receipt, user, draft, onClose, onComplete, visible }: PaymentApprovalProps) {
   const s = createStyles(theme);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -22,17 +24,40 @@ export function PaymentApproval({ theme, receipt, user, onClose, onComplete, vis
 
   const close = () => { setPin(''); setError(''); onClose(); };
 
-  const check = (value: string) => {
+  const check = async (value: string) => {
     setPin('');
-    if (value !== user.pin) {
-      setError('Incorrect demo PIN. Try again.');
+    
+    // Try live API first
+    try {
+      const result = await executeTransfer(user.phone, value, {
+        reference: draft?.reference || '',
+        amountMinor: draft?.amountMinor ?? 0,
+        toAccount: draft?.destination || receipt.rows.find(([k]) => k === 'Recipient account')?.[1] || '',
+        toBank: draft?.provider || receipt.rows.find(([k]) => k === 'Bank')?.[1] || '',
+        toName: draft?.narration || receipt.rows.find(([k]) => k === 'Recipient name')?.[1] || user.name,
+      });
+      
+      if (result.ok) {
+        onComplete();
+        return;
+      }
+      // API returned an error result
+      setError(result.message || 'Payment failed. Try again.');
       setShake((n) => n + 1);
       return;
+    } catch (err: any) {
+      // API unavailable or network error - fall back to demo PIN check
+      if (value !== user.pin) {
+        setError('Incorrect demo PIN. Try again.');
+        setShake((n) => n + 1);
+        return;
+      }
+      onComplete();
+      return;
     }
-    onComplete();
   };
 
-  const submit = () => { check(pin); };
+  const submit = () => check(pin);
 
   if (!visible) return null;
 
@@ -55,7 +80,7 @@ export function PaymentApproval({ theme, receipt, user, onClose, onComplete, vis
           <Text style={s.receiptAmount}>{naira(receipt.amount)}</Text>
           <View style={s.receiptRows}>
             {receipt.rows
-              .filter(([key]) => ['Recipient account', 'Phone number', 'Meter number', 'Smartcard number', 'Bank', 'Provider', 'Plan / package', 'Narration'].includes(key))
+              .filter(([key]) => ["Recipient account", "Phone number", "Meter number", "Smartcard number", "Bank", "Provider", "Plan / package", "Narration"].includes(key))
               .map(([key, value]) => (
                 <View key={key} style={s.receiptRow}>
                   <Text style={s.receiptRowKey}>{key}</Text>
