@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNellaTheme } from '@/lib/theme-context';
 import { useNellaFonts } from '@/lib/fonts';
-import { getAuthToken, getStoredPhone } from '@/lib/api-auth';
+import { getAuthToken } from '@/lib/api-client';
 
 export default function RootLayout() {
   const { theme } = useNellaTheme();

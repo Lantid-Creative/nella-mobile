@@ -12,6 +12,7 @@ interface ButtonProps {
   children: React.ReactNode;
   theme: NellaTheme;
   style?: ViewStyle;
+  className?: string;
   textStyle?: TextStyle;
   testID?: string;
 }

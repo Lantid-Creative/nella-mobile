@@ -8,10 +8,12 @@ import {
   logout as apiLogout,
   getCurrentUser as apiGetCurrentUser,
   verifyPin as apiVerifyPin,
-  setAuthSession,
-  clearAuthSession,
   isDemoMode,
 } from './api-auth';
+import {
+  setAuthSession,
+  clearAuthSession,
+} from './api-client';
 
 export type DemoUser = {
   name: string;
@@ -33,9 +35,9 @@ export type ApprovalCard = {
 };
 
 export type Card =
-  | { kind: 'preview'; preview: ReceiptPreview }
+  | { kind: 'preview'; preview?: ReceiptPreview }
   | { kind: 'balance'; amount: string }
-  | { kind: 'narration'; pending: ApprovalCard; done?: boolean | undefined }
+  | { kind: 'narration'; pending?: ApprovalCard; done?: boolean | undefined }
   | ApprovalCard
   | { kind: 'receipt'; title: string; amount: number; rows: [string, string][] };
 
@@ -148,7 +150,7 @@ export function normalisePhone(raw: string): string | null {
 export async function signUp(name: string, phoneRaw: string, pin: string): Promise<void> {
   // Try live backend first
   try {
-    await import('./api-auth').then(({ post }) => post('/auth/signup', { name, phone: phoneRaw, pin }, { auth: false }));
+    await import('./api-client').then(({ post }) => post('/auth/signup', { name, phone: phoneRaw, pin }, { auth: false }));
     // If signup succeeded, log in
     await signIn(phoneRaw, pin);
     return;
@@ -253,9 +255,15 @@ export async function currentUser(): Promise<DemoUser | null> {
         name: apiUser.full_name,
         phone: apiUser.phone,
         pin: '', // backend doesn't return PIN
-        onboardingComplete: apiUser.onboardingComplete,
-        kycSetupComplete: apiUser.kycSetupComplete,
-        kycStep: apiUser.kycStep,
+        onboardingComplete: apiUser.onboarding?.[
+          'onboardingComplete'
+        ] as boolean | undefined,
+        kycSetupComplete: apiUser.onboarding?.[
+          'kycSetupComplete'
+        ] as boolean | undefined,
+        kycStep: apiUser.onboarding?.[
+          'kycStep'
+        ] as number | undefined,
       };
     }
   } catch {}
@@ -338,7 +346,7 @@ export async function loadChat(phone: string): Promise<ChatMsg[]> {
     })
     .map((message): ChatMsg => {
       if (!message.media) {
-        if (message.text === undefined) return message;
+        if (message.text === undefined) return message as ChatMsg;
         const migratedText = LEGACY_CHAT_COPY[message.text];
         return migratedText === undefined ? message : { ...message, text: migratedText };
       }

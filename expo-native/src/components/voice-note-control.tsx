@@ -20,7 +20,7 @@ export function VoiceNoteControl({ theme, mode, onPressStart, onPressStop, onPre
       onPress={mode === 'recording' ? onPressStop : onPressStart}
       activeOpacity={0.8}
     >
-      <Mic size={20} strokeWidth={2} style={{ color: isRecording ? theme.colors.destructiveForeground : theme.colors.primaryForeground }} />
+      <Mic size={20} strokeWidth={2} color={isRecording ? theme.colors.destructiveForeground : theme.colors.primaryForeground} />
     </TouchableOpacity>
   );
 }

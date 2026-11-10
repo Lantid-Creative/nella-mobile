@@ -142,7 +142,6 @@ export default function AuthPage() {
       return;
     }
     try {
-      await signInVerified(unlocked);
       await resumeAccount();
     } catch (err: any) {
       setError(err?.message || "Couldn't open your account. Use your PIN instead.");
@@ -315,7 +314,7 @@ export default function AuthPage() {
             {mode !== 'in' && step < 3 && (
               <TouchableOpacity onPress={() => (mode === 'up' && step > 0 ? (setStep(step - 1), setError('')) : switchMode('in'))}>
                 <View style={s.backButton}>
-                  <ArrowLeft size={24} strokeWidth={2} style={{ color: theme.colors.foreground }} />
+                  <ArrowLeft size={24} strokeWidth={2} color={theme.colors.foreground} />
                 </View>
               </TouchableOpacity>
             )}
@@ -359,7 +358,7 @@ export default function AuthPage() {
             ) : mode === 'up' && step === 4 ? (
               <View style={s.bioSetup}>
                 <View style={s.bioIcon}>
-                  <ScanFace size={56} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                  <ScanFace size={56} strokeWidth={2} color={theme.colors.primary} />
                 </View>
                 <Text style={s.bioTitle}>Unlock with biometrics.</Text>
                 <Text style={s.bioSubtitle}>
@@ -407,7 +406,7 @@ export default function AuthPage() {
                       ))}
                       <View style={s.noticeBox}>
                         <View style={s.noticeIcon}>
-                          <ShieldCheck size={16} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                          <ShieldCheck size={16} strokeWidth={2} color={theme.colors.primary} />
                         </View>
                         <View style={s.noticeText}>
                           <Text style={s.noticeTitle}>When live account opening is available</Text>
@@ -472,7 +471,7 @@ export default function AuthPage() {
                                 }}
                               />
                               <TouchableOpacity style={s.togglePinButton} onPress={() => setShowPin(!showPin)}>
-                                {showPin ? <EyeOff size={20} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} /> : <Eye size={20} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} />}
+                                {showPin ? <EyeOff size={20} strokeWidth={2} color={theme.colors.mutedForeground} /> : <Eye size={20} strokeWidth={2} color={theme.colors.mutedForeground} />}
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -492,17 +491,17 @@ export default function AuthPage() {
                       {error && <Text style={s.errorText}>{error}</Text>}
                       {success && (
                         <View style={s.successBox}>
-                          <Check size={20} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                          <Check size={20} strokeWidth={2} color={theme.colors.primary} />
                           <Text style={s.successText}>{success}</Text>
                         </View>
                       )}
                       <Button theme={theme} variant="default" onPress={handleSubmit}>
                         {mode === 'in' ? 'Log in' : mode === 'reset' ? 'Reset demo PIN' : step === 0 ? "Let's get started" : step === 1 ? 'Continue' : step === 2 ? 'Create demo account' : 'Complete setup'}
-                        <ArrowRight size={20} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginLeft: 6 }} />
+                        <ArrowRight size={20} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginLeft: 6 }} />
                       </Button>
                       {mode === 'in' && bioPhone && (
                         <Button theme={theme} variant="outline" disabled={bioBusy} onPress={() => void unlock()}>
-                          <ScanFace size={18} strokeWidth={2} style={{ color: theme.colors.primary, marginRight: 6 }} />
+                          <ScanFace size={18} strokeWidth={2} color={theme.colors.primary} style={{ marginRight: 6 }} />
                           {bioBusy ? "Waiting for your device…" : 'Unlock with biometrics'}
                         </Button>
                       )}
@@ -579,7 +578,7 @@ function KycSetup({
       </Text>
       <View style={s.kycNoticeBox}>
         <View style={s.kycNoticeIcon}>
-          <ShieldCheck size={18} strokeWidth={2} style={{ color: theme.colors.primary }} />
+          <ShieldCheck size={18} strokeWidth={2} color={theme.colors.primary} />
         </View>
         <View style={s.kycNoticeText}>
           <Text style={s.kycNoticeTitle}>Demo KYC · Not identity verification</Text>
@@ -590,7 +589,7 @@ function KycSetup({
         {step === 0 ? (
           <>
             <View style={s.kycDetailsHeader}>
-              <UserRound size={18} strokeWidth={2} style={{ color: theme.colors.primary }} />
+              <UserRound size={18} strokeWidth={2} color={theme.colors.primary} />
               <Text style={s.kycDetailsTitle}>Identity details</Text>
             </View>
             <View style={s.detailsList}>
@@ -605,7 +604,7 @@ function KycSetup({
         ) : step === 1 ? (
           <>
             <View style={s.kycDetailsHeader}>
-              <MapPin size={18} strokeWidth={2} style={{ color: theme.colors.primary }} />
+              <MapPin size={18} strokeWidth={2} color={theme.colors.primary} />
               <Text style={s.kycDetailsTitle}>Sample residential address</Text>
             </View>
             <View style={s.detailsList}>
@@ -644,11 +643,11 @@ function KycSetup({
           onPress={() => (step < 2 ? onStepChange(step + 1) : onComplete())}
         >
           {step === 2 ? 'Complete demo KYC setup' : step === 0 ? 'Confirm profile' : 'Review KYC setup'}
-          <ArrowRight size={20} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginLeft: 6 }} />
+          <ArrowRight size={20} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginLeft: 6 }} />
         </Button>
         {step > 0 && (
           <Button theme={theme} variant="ghost" onPress={() => onStepChange(step - 1)}>
-            <ArrowLeft size={20} strokeWidth={2} style={{ color: theme.colors.foreground, marginRight: 6 }} /> Back
+            <ArrowLeft size={20} strokeWidth={2} color={theme.colors.foreground} style={{ marginRight: 6 }} /> Back
           </Button>
         )}
       </View>

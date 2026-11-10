@@ -30,7 +30,7 @@ export async function getReceipt(reference: string): Promise<ReceiptResult> {
   try {
     const res = await get<ReceiptResult>(`/receipt/${encodeURIComponent(reference)}`, { auth: true });
     if (res.ok) return res;
-    throw new NellaApiError(res.reason, 'receipt_failed');
+    throw new NellaApiError((res as unknown as ReceiptError).reason, 'receipt_failed');
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
     throw new NellaApiError('Failed to load receipt', 'receipt_failed');

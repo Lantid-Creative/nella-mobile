@@ -15,7 +15,7 @@ import {
 import { dayLabel, groupInfo, greeting, paymentSteps } from '@/lib/chat-ux';
 import { Button } from '@/components/ui/button';
 import { NellaMascot } from '@/components/nella-mascot';
-import { ArrowDown, ArrowLeftRight, ArrowUp, Bell, Camera, ChevronRight, ImagePlus, LogOut, Mic, Plus, ReceiptText, RotateCcw, Shield, Smartphone, UsersRound, Wallet, X } from 'lucide-react-native';
+import { ArrowDown, ArrowLeftRight, ArrowUp, Bell, Camera, ChevronRight, CircleHelp, ImagePlus, LogOut, Mic, Plus, ReceiptText, RotateCcw, Shield, Smartphone, UsersRound, Wallet, X } from 'lucide-react-native';
 import { startPayment, answerPayment, paymentService, type PaymentConversation, type PaymentDraft } from '@/lib/chat-payments';
 import { SERVICE_LABELS, type AppPanel, type ReceiptPreview } from '@/lib/app-provisions';
 import { paymentPreview } from '@/lib/app-provisions';
@@ -31,6 +31,7 @@ import { router } from 'expo-router';
 import { login, isDemoMode } from '@/lib/api-auth';
 import { post, get } from '@/lib/api-client';
 import { fetchBalance } from '@/lib/api-balance';
+import { quoteTransfer } from '@/lib/api-transfers';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -73,13 +74,13 @@ export default function ChatPage() {
   const [voiceSeconds, setVoiceSeconds] = useState(0);
   const [notice, setNotice] = useState("");
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<any>(null);
   const followsBottom = useRef(true);
   const msgsRef = useRef<ChatMsg[]>([]);
   const cameraRef = useRef<CameraExpo.CameraView>(null);
   const [cameraType, setCameraType] = useState("back");
   const [zoom, setZoom] = useState(1);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<any>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -193,7 +194,7 @@ export default function ChatPage() {
         setChatChoices(turn.choices ?? []);
         
         // Call live API for quote when payment reaches review state
-        if (turn.preview && turn.state.field === "review") {
+        if (turn && turn.state && turn.preview && turn.state.field === "review") {
           try {
             const amountMinor = Number(turn.state.draft.amount) * 100;
             const quote = await quoteTransfer({
@@ -294,7 +295,7 @@ export default function ChatPage() {
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     const photo = await cameraRef.current.takePictureAsync({ quality: 0.92 });
-    if (!photo.cancelled && photo.uri) {
+    if (photo.uri) {
       setPendingPhoto({ uri: photo.uri, name: `nella-photo-${Date.now()}.jpg` });
       setCameraOpen(false);
     }
@@ -386,7 +387,7 @@ export default function ChatPage() {
     }
   };
 
-  const previews = msgs.flatMap((m) => (m.card?.kind === "preview" ? [m.card.preview] : []));
+  const previews = msgs.flatMap((m) => (m.card?.kind === "preview" && m.card.preview ? [m.card.preview] : []));
   const lastPrepared = [...previews]
     .reverse()
     .map((p) => draftFromPreview(p))
@@ -424,7 +425,7 @@ export default function ChatPage() {
           <NellaMascot theme={theme} size={28} />
         </View>
         <TouchableOpacity style={s.notifButton} onPress={() => setPanel("notifications")}>
-          <Bell size={22} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} />
+          <Bell size={22} strokeWidth={2} color={theme.colors.mutedForeground} />
         </TouchableOpacity>
         <TouchableOpacity style={s.profileButton} onPress={() => setProfileOpen(true)}>
           <Text style={s.profileAvatar}>{first.slice(0, 1)}</Text>
@@ -450,18 +451,18 @@ export default function ChatPage() {
               {QUICK_ACTIONS.map((action) => (
                 <TouchableOpacity key={action.label} style={s.quickTile} onPress={() => runQuickAction(action)}>
                   <View style={s.quickIcon}>
-                    <action.icon size={24} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                    <action.icon size={24} strokeWidth={2} color={theme.colors.primary} />
                   </View>
                   <Text style={s.quickLabel}>{action.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <Button theme={theme} variant="ghost" style={s.voiceNoteBtn} onPress={startVoice}>
-              <Mic size={20} strokeWidth={2} style={{ color: theme.colors.primary, marginRight: 6 }} /> Voice note
+              <Mic size={20} strokeWidth={2} color={theme.colors.primary} style={{ marginRight: 6 }} /> Voice note
             </Button>
             <TouchableOpacity style={s.allServices} onPress={() => { setPanel("services"); setProfileOpen(true); }}>
               <Text style={s.allServicesText}>All money services</Text>
-              <ArrowUp size={16} strokeWidth={2} style={{ color: theme.colors.primary, marginLeft: 4 }} />
+              <ArrowUp size={16} strokeWidth={2} color={theme.colors.primary} style={{ marginLeft: 4 }} />
             </TouchableOpacity>
             <Text style={s.emptyFooter}>Preview only · Banking services aren't connected</Text>
           </View>
@@ -510,7 +511,7 @@ export default function ChatPage() {
                         </View>
                       )}
                       {m.text && (
-                        <Text style={[s.msgText, m.role === "user" ? s.msgTextUser : s.msgTextNel la]}>{m.text}</Text>
+                        <Text style={[s.msgText, m.role === "user" ? s.msgTextUser : s.msgTextNella]}>{m.text}</Text>
                       )}
                       {m.card?.kind === "balance" && (
                         <View style={s.balanceCard}>
@@ -525,7 +526,7 @@ export default function ChatPage() {
                           )}
                         </View>
                       )}
-                      {m.card?.kind === "preview" && (
+                      {m.card?.kind === "preview" && m.card.preview && (
                         <PaymentPreviewCard theme={theme} receipt={m.card.preview} onEdit={() => {}} />
                       )}
                       {m.card?.kind === "narration" && !m.card.done && ((m.card as any).pending) && (
@@ -565,7 +566,7 @@ export default function ChatPage() {
                       {m.card?.kind === "receipt" && (
                         <View style={s.receiptCard}>
                           <View style={s.receiptHeader}>
-                            <CircleHelp size={16} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} />
+                            <CircleHelp size={16} strokeWidth={2} color={theme.colors.mutedForeground} />
                             <Text style={s.receiptTitle}>Transaction status</Text>
                           </View>
                           <Text style={s.receiptNote}>We couldn't verify this transaction. Check your account before retrying.</Text>
@@ -579,7 +580,7 @@ export default function ChatPage() {
             })}
             {newMessages && (
               <Button theme={theme} variant="secondary" style={s.newMessagesBtn} onPress={() => { followsBottom.current = true; setNewMessages(false); void scrollRef.current?.scrollToEnd?.({ animated: true }); }}>
-                <ArrowDown size={20} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginRight: 6 }} /> New messages
+                <ArrowDown size={20} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginRight: 6 }} /> New messages
               </Button>
             )}
           </View>
@@ -588,7 +589,7 @@ export default function ChatPage() {
 
       {!payment && !voiceMode && lastPrepared && (
         <TouchableOpacity style={s.reuseBtn} onPress={() => reuse(lastPrepared!)}>
-          <RotateCcw size={16} strokeWidth={2} style={{ color: theme.colors.mutedForeground, marginRight: 6 }} />
+          <RotateCcw size={16} strokeWidth={2} color={theme.colors.mutedForeground} style={{ marginRight: 6 }} />
           <Text style={s.reuseBtnText}>Prepare again · {SERVICE_LABELS[lastPrepared.service]} · {naira(Number(lastPrepared.amount))}</Text>
         </TouchableOpacity>
       )}
@@ -600,10 +601,10 @@ export default function ChatPage() {
           <View style={s.photoReview}>
             <View style={s.photoReviewHeader}>
               <TouchableOpacity style={s.photoReviewClose} onPress={() => setPendingPhoto(null)}>
-                <X size={24} strokeWidth={2} style={{ color: theme.colors.foreground }} />
+                <X size={24} strokeWidth={2} color={theme.colors.foreground} />
               </TouchableOpacity>
               <TouchableOpacity style={s.photoReviewRetake} onPress={() => { setPendingPhoto(null); setCameraOpen(true); }}>
-                <Camera size={20} strokeWidth={2} style={{ color: theme.colors.foreground }} /> Retake
+                <Camera size={20} strokeWidth={2} color={theme.colors.foreground} /> Retake
               </TouchableOpacity>
             </View>
             <View style={s.photoReviewImageWrap}>
@@ -619,7 +620,7 @@ export default function ChatPage() {
                 onSubmitEditing={sendPhoto}
               />
               <TouchableOpacity style={s.photoSendBtn} onPress={sendPhoto}>
-                <ArrowUp size={20} strokeWidth={2} style={{ color: theme.colors.primaryForeground }} />
+                <ArrowUp size={20} strokeWidth={2} color={theme.colors.primaryForeground} />
               </TouchableOpacity>
             </View>
           </View>
@@ -632,7 +633,7 @@ export default function ChatPage() {
             </View>
             <Button theme={theme} variant="destructive" style={s.voiceStopBtn} onPress={stopVoice}>Stop & review</Button>
             <TouchableOpacity style={s.voiceCancelBtn} onPress={discardVoice}>
-              <X size={20} strokeWidth={2} style={{ color: theme.colors.foreground }} />
+              <X size={20} strokeWidth={2} color={theme.colors.foreground} />
             </TouchableOpacity>
           </View>
         )}
@@ -677,7 +678,7 @@ export default function ChatPage() {
               <Text style={s.replyBarText}>{quoteText(replyingTo.text ?? replyingTo.media?.label)}</Text>
             </View>
             <TouchableOpacity style={s.replyBarClose} onPress={() => setReplyingTo(null)}>
-              <X size={20} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} />
+              <X size={20} strokeWidth={2} color={theme.colors.mutedForeground} />
             </TouchableOpacity>
           </View>
         )}
@@ -694,7 +695,7 @@ export default function ChatPage() {
             <View style={s.cameraHeader}>
               <Text style={s.cameraTitle}>Snap to pay</Text>
               <TouchableOpacity style={s.cameraClose} onPress={() => setCameraOpen(false)}>
-                <X size={24} strokeWidth={2} style={{ color: theme.colors.foreground }} />
+                <X size={24} strokeWidth={2} color={theme.colors.foreground} />
               </TouchableOpacity>
             </View>
             <View style={s.cameraControls}>
@@ -704,7 +705,7 @@ export default function ChatPage() {
               </View>
               <TouchableOpacity style={s.zoomIn} />
               <TouchableOpacity style={s.captureBtn} onPress={takePhoto}>
-                <Camera size={30} strokeWidth={3} style={{ color: theme.colors.foreground }} />
+                <Camera size={30} strokeWidth={3} color={theme.colors.foreground} />
               </TouchableOpacity>
             </View>
           </CameraExpo.CameraView>
@@ -712,7 +713,7 @@ export default function ChatPage() {
 
         <View style={s.inputRow}>
           <TouchableOpacity style={s.attachmentBtn} onPress={() => { setCameraOpen(true); }}>
-            <Plus size={24} strokeWidth={2} style={{ color: theme.colors.foreground }} />
+            <Plus size={24} strokeWidth={2} color={theme.colors.foreground} />
           </TouchableOpacity>
           <TextInput
             ref={inputRef as any}
@@ -725,7 +726,7 @@ export default function ChatPage() {
           />
           {text.trim() ? (
             <TouchableOpacity style={s.sendBtn} onPress={() => send(text)}>
-              <ArrowUp size={20} strokeWidth={2} style={{ color: theme.colors.primaryForeground }} />
+              <ArrowUp size={20} strokeWidth={2} color={theme.colors.primaryForeground} />
             </TouchableOpacity>
           ) : (
             <VoiceNoteControl theme={theme} mode={voiceMode} onPressStart={startVoice} onPressStop={stopVoice} onPressCancel={discardVoice} />
@@ -775,7 +776,7 @@ function createStyles(theme: any) {
     bubbleWrap: { maxWidth: "85%" },
     msgText: { fontSize: 15, lineHeight: 22 },
     msgTextUser: { color: theme.colors.primaryForeground, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: theme.colors.primary, borderRadius: 20, borderBottomRightRadius: 4 },
-    msgTextNel la: { color: theme.colors.foreground, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: theme.colors.card, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border },
+    msgTextNella: { color: theme.colors.foreground, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: theme.colors.card, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border },
     msgTime: { fontSize: 10, color: theme.colors.mutedForeground, marginTop: 2, alignSelf: "flex-end" },
     msgTight: { marginTop: -8 },
     dayDivider: { alignItems: "center", marginVertical: 8 },

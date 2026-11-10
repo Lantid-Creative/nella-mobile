@@ -53,6 +53,7 @@ export type PaymentDraft = {
   narration: string;
   plan: string;
   reference?: string;
+  amountMinor?: number;
 };
 
 export function validatePaymentDraft(draft: PaymentDraft): string | null {

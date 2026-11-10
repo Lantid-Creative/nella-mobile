@@ -4,7 +4,7 @@
  * Falls back to demo-mode PIN if the backend is unreachable.
  */
 
-import { post, get, clearAuthSession, setAuthSession, getAuthToken, getStoredPhone, getStoredName, NellaApiError } from './api-client';
+import { post, get, clearAuthSession, setAuthSession, getAuthToken, getStoredPhone, getStoredName, NellaApiError, type ApiUser } from './api-client';
 import { signIn as demoSignIn, currentUser as demoCurrentUser, canEnterChat as demoCanEnterChat, DEMO_PHONE, DEMO_PIN, checkPin as demoCheckPin } from './demo-store';
 
 export interface LoginResult {
@@ -83,6 +83,7 @@ export async function verifyPin(phone: string, pin: string): Promise<boolean> {
   } catch {
     // Fall back to demo
     try {
+      const normalized = phone.replace(/\D/g, '');
       const { checkPin } = await import('./demo-store');
       // We need the user object; demo store doesn't expose it easily without login
       return normalized === DEMO_PHONE && pin === DEMO_PIN;

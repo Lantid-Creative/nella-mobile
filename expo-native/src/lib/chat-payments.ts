@@ -2,8 +2,9 @@ import { demoReply } from './demo-store';
 import { parsePaymentRequest } from './payment-request';
 import { paymentPreview, validatePaymentDraft, type MoneyService, type PaymentDraft, type ReceiptPreview } from './app-provisions';
 
+export type { PaymentDraft };
+
 export type PaymentField = 'provider' | 'destination' | 'plan' | 'amount' | 'narration';
-export type PaymentDraft = { service: MoneyService; amount: string; destination: string; provider: string; narration: string; plan: string; reference?: string };
 export type PaymentConversation = { draft: PaymentDraft; field: PaymentField | 'review'; editing?: boolean };
 type Turn = { state: PaymentConversation | null; text: string; preview?: ReceiptPreview; choices?: string[] };
 
@@ -28,9 +29,26 @@ export function paymentService(text: string): MoneyService | 'services' | null {
 }
 
 const questions = (draft: PaymentDraft): Record<PaymentField, string> => ({
-  provider: draft.service === 'transfer' ? 'Which bank is the recipient using?' : draft.service === 'electricity' || draft.service === 'cable' ? 'Who is your bill provider?' : 'Which network?',
-  destination: draft.service === 'transfer' ? "What's the recipient's 10-digit account number?" : draft.service === 'electricity' ? "What's the meter number?" : draft.service === 'cable' ? "What's the smartcard number?" : 'What phone number should I use?',
-  plan: draft.service === 'electricity' ? 'Is the meter prepaid or postpaid?' : draft.service === 'cable' ? "Which package would you like? Availability isn't verified yet." : 'Which data plan would you like? Availability isn't verified yet.',
+  provider:
+    draft.service === 'transfer'
+      ? 'Which bank is the recipient using?'
+      : draft.service === 'electricity' || draft.service === 'cable'
+        ? 'Who is your bill provider?'
+        : 'Which network?',
+  destination:
+    draft.service === 'transfer'
+      ? "What's the recipient's 10-digit account number?"
+      : draft.service === 'electricity'
+        ? "What's the meter number?"
+        : draft.service === 'cable'
+          ? "What's the smartcard number?"
+          : 'What phone number should I use?',
+  plan:
+    draft.service === 'electricity'
+      ? 'Is the meter prepaid or postpaid?'
+      : draft.service === 'cable'
+        ? "Which package would you like? Availability isn't verified yet."
+        : "Which data plan would you like? Availability isn't verified yet.",
   amount: 'How much in naira?',
   narration: "What's this transfer for? You can skip the narration.",
 });

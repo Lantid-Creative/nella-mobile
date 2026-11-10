@@ -2,7 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Pencil } from 'lucide-react-native';
 import type { NellaTheme } from '@/lib/theme';
 import { naira } from '@/lib/demo-store';
-import type { ReceiptPreview, PaymentField } from '@/lib/app-provisions';
+import type { ReceiptPreview } from '@/lib/app-provisions';
+import type { PaymentField } from '@/lib/chat-payments';
 
 interface PaymentPreviewCardProps {
   theme: NellaTheme;
@@ -27,7 +28,7 @@ export function PaymentPreviewCard({ theme, receipt, onEdit }: PaymentPreviewCar
         <Text style={s.amount}>{naira(receipt.amount)}</Text>
         {onEdit && (
           <TouchableOpacity style={s.editBtn} onPress={() => onEdit('amount')} activeOpacity={0.8}>
-            <Pencil size={16} strokeWidth={2} style={{ color: theme.colors.primary }} />
+            <Pencil size={16} strokeWidth={2} color={theme.colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -41,7 +42,7 @@ export function PaymentPreviewCard({ theme, receipt, onEdit }: PaymentPreviewCar
                 <Text style={s.rowValue}>{value}</Text>
                 {onEdit && (
                   <TouchableOpacity style={s.editBtn} onPress={() => onEdit(fieldFor(key))} activeOpacity={0.8}>
-                    <Pencil size={16} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                    <Pencil size={16} strokeWidth={2} color={theme.colors.primary} />
                   </TouchableOpacity>
                 )}
               </View>

@@ -55,7 +55,7 @@ export async function hasBiometrics(phone: string): Promise<boolean> {
 
 export async function enableBiometrics(phone: string, name: string): Promise<void> {
   try {
-    const credentialId = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+    const credentialId = toBase64Url(crypto.getRandomValues(new Uint8Array(32)).buffer);
     const record: BiometricRecord = { phone, credentialId, name };
     await persistRecords([...(await readRecords()).filter((existing) => existing.phone !== phone), record]);
   } catch (error) {

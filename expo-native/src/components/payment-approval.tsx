@@ -1,4 +1,5 @@
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, useState } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
 import { LockKeyhole, ShieldCheck } from 'lucide-react-native';
 import type { NellaTheme } from '@/lib/theme';
 import { naira } from '@/lib/demo-store';
@@ -20,7 +21,7 @@ export function PaymentApproval({ theme, receipt, user, draft, onClose, onComple
   const s = createStyles(theme);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const [shake, setShake] = useState(0);
+  const [shake, setShake] = useState<number>(0);
 
   const close = () => { setPin(''); setError(''); onClose(); };
 
@@ -67,7 +68,7 @@ export function PaymentApproval({ theme, receipt, user, draft, onClose, onComple
       <View style={s.dialog}>
         <View style={s.dialogHeader}>
           <View style={s.lockIcon}>
-            <LockKeyhole size={20} strokeWidth={2} style={{ color: theme.colors.primary }} />
+            <LockKeyhole size={20} strokeWidth={2} color={theme.colors.primary} />
           </View>
           <View style={s.dialogTitleWrap}>
             <Text style={s.dialogTitle}>Approve payment</Text>
@@ -108,7 +109,7 @@ export function PaymentApproval({ theme, receipt, user, draft, onClose, onComple
           <Text style={s.pinNote}>Use the test PIN from your demo account, never your banking PIN.</Text>
           {error && <Text style={s.errorText}>{error}</Text>}
           <Button theme={theme} variant="default" disabled={pin.length !== 4} onPress={submit}>
-            <ShieldCheck size={18} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginRight: 6 }} /> Confirm demo approval
+            <ShieldCheck size={18} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginRight: 6 }} /> Confirm demo approval
           </Button>
           <Button theme={theme} variant="outline" onPress={close}>Back to chat</Button>
         </View>

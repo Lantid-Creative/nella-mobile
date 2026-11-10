@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useNellaTheme } from '@/lib/theme-context';
 import { NellaMascot } from '@/components/nella-mascot';
 import { router } from 'expo-router';
 import { canEnterChat } from '@/lib/demo-store';
-import { getAuthToken } from '@/lib/api-auth';
+import { getAuthToken } from '@/lib/api-client';
 
 export default function SplashScreen() {
   const { theme } = useNellaTheme();

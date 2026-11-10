@@ -48,14 +48,14 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
     <View style={[s.sheet, { backgroundColor: theme.colors.background }]}>
       <View style={s.sheetHeader}>
         <TouchableOpacity style={s.backBtn} onPress={() => (depth > 0 ? onBack() : onChange(null))}>
-          <ArrowLeft size={24} strokeWidth={2} style={{ color: theme.colors.foreground }} />
+          <ArrowLeft size={24} strokeWidth={2} color={theme.colors.foreground} />
         </TouchableOpacity>
         <View style={s.sheetTitleWrap}>
           <Text style={s.sheetTitle}>{TITLES[panel]}</Text>
           <Text style={s.sheetSubtitle}>Preview · Live banking unavailable</Text>
         </View>
         <TouchableOpacity style={s.closeBtn} onPress={() => onChange(null)}>
-          <X size={24} strokeWidth={2} style={{ color: theme.colors.foreground }} />
+          <X size={24} strokeWidth={2} color={theme.colors.foreground} />
         </TouchableOpacity>
       </View>
       <View style={s.sheetBody}>{renderPanel(panel)}</View>
@@ -76,12 +76,12 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
             </View>
             <View style={s.borderL} />
             <View style={s.checkRow}>
-              <Check size={16} strokeWidth={2} style={{ color: theme.colors.primary }} />
+              <Check size={16} strokeWidth={2} color={theme.colors.primary} />
               <Text style={s.checkText}>Name, phone & demo PIN</Text>
               <Text style={s.checkSub}>Completed on this device</Text>
             </View>
             <View style={s.checkRow}>
-              <ShieldCheck size={16} strokeWidth={2} style={{ color: theme.colors.primary }} />
+              <ShieldCheck size={16} strokeWidth={2} color={theme.colors.primary} />
               <Text style={s.checkText}>Identity verification</Text>
               <Text style={s.checkSub}>Required before a live account can open</Text>
             </View>
@@ -101,7 +101,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
             </View>
             <View style={s.infoBox}>
               <View style={s.infoIcon}>
-                <ShieldCheck size={14} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                <ShieldCheck size={14} strokeWidth={2} color={theme.colors.primary} />
               </View>
               <View style={s.infoTextWrap}>
                 <Text style={s.infoTitle}>Verification is not connected</Text>
@@ -109,7 +109,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
               </View>
             </View>
             <Button theme={theme} variant="default" disabled style={s.disabledBtn}>
-              <LockKeyhole size={18} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginRight: 6 }} /> Verify identity
+              <LockKeyhole size={18} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginRight: 6 }} /> Verify identity
             </Button>
           </View>
         );
@@ -117,7 +117,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
         return (
           <View style={s.spaceY5}>
             <View style={s.borderB}>
-              <Wallet size={24} strokeWidth={2} style={{ color: theme.colors.primary }} style={{ marginBottom: 8 }} />
+              <Wallet size={24} strokeWidth={2} color={theme.colors.primary} style={{ marginBottom: 8 }} />
               <Text style={s.accountLabel}>Available balance</Text>
               <Text style={s.accountValue}>Not available</Text>
             </View>
@@ -136,7 +136,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
             </View>
             <View style={s.infoBox}>
               <View style={s.infoIcon}>
-                <ShieldCheck size={14} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                <ShieldCheck size={14} strokeWidth={2} color={theme.colors.primary} />
               </View>
               <View style={s.infoTextWrap}>
                 <Text style={s.infoTitle}>No funding account yet</Text>
@@ -145,7 +145,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
             </View>
             <Button theme={theme} variant="default" style={s.setupBtn} onPress={() => onChange('onboarding')}>
               View account setup
-              <ArrowRight size={16} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginLeft: 6 }} />
+              <ArrowRight size={16} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginLeft: 6 }} />
             </Button>
           </View>
         );
@@ -166,14 +166,14 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
                 'Support replies & security alerts',
               ].map((label) => (
                 <View key={label} style={s.notifyItem}>
-                  <Bell size={16} strokeWidth={2} style={{ color: theme.colors.primary, marginTop: 1 }} />
+                  <Bell size={16} strokeWidth={2} color={theme.colors.primary} style={{ marginTop: 1 }} />
                   <Text style={s.notifyText}>{label}</Text>
                 </View>
               ))}
             </View>
             <View style={s.infoBox}>
               <View style={s.infoIcon}>
-                <ShieldCheck size={14} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                <ShieldCheck size={14} strokeWidth={2} color={theme.colors.primary} />
               </View>
               <View style={s.infoTextWrap}>
                 <Text style={s.infoTitle}>Notifications are not active</Text>
@@ -188,7 +188,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
             <Empty title="No saved beneficiaries" text="A recipient must be resolved and verified by the bank before you can save them for future payments." icon={Landmark} theme={theme} s={s} />
             <Button theme={theme} variant="default" style={s.sendBtn} onPress={() => onChange('transfer')}>
               Send money in chat
-              <ArrowRight size={16} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginLeft: 6 }} />
+              <ArrowRight size={16} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginLeft: 6 }} />
             </Button>
           </View>
         );
@@ -197,7 +197,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
           <View style={s.spaceY4}>
             <View style={s.infoBox}>
               <View style={s.infoIcon}>
-                <ShieldCheck size={14} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                <ShieldCheck size={14} strokeWidth={2} color={theme.colors.primary} />
               </View>
               <View style={s.infoTextWrap}>
                 <Text style={s.infoTitle}>Keep your PIN private</Text>
@@ -208,7 +208,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
               {['Change payment PIN', 'Forgot payment PIN', 'Freeze account', 'Recover account'].map((label) => (
                 <TouchableOpacity key={label} style={s.actionRow} onPress={() => {}}>
                   <Text style={s.actionLabel}>{label}</Text>
-                  <ChevronRight size={16} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} />
+                  <ChevronRight size={16} strokeWidth={2} color={theme.colors.mutedForeground} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -219,7 +219,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
           <View style={s.spaceY4}>
             <View style={s.infoBox}>
               <View style={s.infoIcon}>
-                <ShieldCheck size={14} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                <ShieldCheck size={14} strokeWidth={2} color={theme.colors.primary} />
               </View>
               <View style={s.infoTextWrap}>
                 <Text style={s.infoTitle}>Never share your PIN or OTP</Text>
@@ -229,11 +229,11 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
             <Text style={s.fieldLabel}>Issue</Text>
             <View style={s.fieldWrap}>
               <Text style={s.selectText}>Transfer issue</Text>
-              <ChevronRight size={16} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} />
+              <ChevronRight size={16} strokeWidth={2} color={theme.colors.mutedForeground} />
             </View>
             <Text style={s.fieldLabel}>Transaction reference <Text style={s.fieldLabelNote}>(optional)</Text></Text>
             <Text style={s.fieldLabel}>What happened?</Text>
-            <Button theme={theme} variant="default" style={s.prepareBtn}>Prepare support draft<FileText size={16} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginLeft: 6 }} /></Button>
+            <Button theme={theme} variant="default" style={s.prepareBtn}>Prepare support draft<FileText size={16} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginLeft: 6 }} /></Button>
           </View>
         );
       case 'insights':
@@ -241,10 +241,10 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
           <View style={s.spaceY5}>
             <Empty title="No spending data yet" text="Income, spending categories, payment history and statements need verified account transactions." icon={FileText} theme={theme} s={s} />
             <Button theme={theme} variant="default" disabled style={s.disabledBtn}>
-              <ArrowDownToLine size={18} strokeWidth={2} style={{ color: theme.colors.primaryForeground, marginRight: 6 }} /> Statement unavailable
+              <ArrowDownToLine size={18} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginRight: 6 }} /> Statement unavailable
             </Button>
             <Button theme={theme} variant="outline" style={s.viewActivity} onPress={() => onChange('activity')}>
-              <ReceiptText size={18} strokeWidth={2} style={{ color: theme.colors.primary, marginRight: 6 }} /> View activity
+              <ReceiptText size={18} strokeWidth={2} color={theme.colors.primary} style={{ marginRight: 6 }} /> View activity
             </Button>
           </View>
         );
@@ -253,7 +253,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
           <View style={s.spaceY4}>
             <View style={s.infoBox}>
               <View style={s.infoIcon}>
-                <ShieldCheck size={14} strokeWidth={2} style={{ color: theme.colors.primary }} />
+                <ShieldCheck size={14} strokeWidth={2} color={theme.colors.primary} />
               </View>
               <View style={s.infoTextWrap}>
                 <Text style={s.infoTitle}>Business services</Text>
@@ -275,7 +275,7 @@ export function NellaServices({ theme, panel, onChange, onBack, depth, user, pre
             ))}
             <Button theme={theme} variant="outline" style={s.businessHelp} onPress={() => onChange('support')}>
               Business account help
-              <ArrowRight size={16} strokeWidth={2} style={{ color: theme.colors.primary, marginLeft: 6 }} />
+              <ArrowRight size={16} strokeWidth={2} color={theme.colors.primary} style={{ marginLeft: 6 }} />
             </Button>
           </View>
         );
@@ -301,13 +301,13 @@ function PreviewActivity({ theme, previews, onReuse }: { theme: NellaTheme; prev
                 <Text style={s.previewAmount}>{naira(receipt.amount)}</Text>
                 <Text style={s.previewNote}>Not submitted</Text>
               </View>
-              <ChevronRight size={16} strokeWidth={2} style={{ color: theme.colors.mutedForeground }} />
+              <ChevronRight size={16} strokeWidth={2} color={theme.colors.mutedForeground} />
             </TouchableOpacity>
           ))}
         </View>
       ) : (
         <View style={s.emptyState}>
-          <FileText size={32} strokeWidth={2} style={{ color: theme.colors.primary }} />
+          <FileText size={32} strokeWidth={2} color={theme.colors.primary} />
           <Text style={s.emptyTitle}>No prepared payments yet</Text>
           <Text style={s.emptySub}>Payments you prepare in chat will appear here.</Text>
         </View>
@@ -319,7 +319,7 @@ function PreviewActivity({ theme, previews, onReuse }: { theme: NellaTheme; prev
 function Empty({ title, text, icon: Icon, theme, s }: { title: string; text: string; icon: any; theme: NellaTheme; s: any }) {
   return (
     <View style={s.emptyContainer}>
-      <Icon size={32} style={{ color: theme.colors.primary }} />
+      <Icon size={32} color={theme.colors.primary} />
       <Text style={s.emptyTitle}>{title}</Text>
       <Text style={s.emptySub}>{text}</Text>
     </View>
