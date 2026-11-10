@@ -44,7 +44,7 @@ export async function fetchTransactions(opts?: {
     if (opts?.service && opts.service !== 'all') params.set('service', opts.service);
     if (opts?.search) params.set('search', opts.search);
 
-    const path = `/transactions?${params.toString()}`;
+    const path = `/history?${params.toString()}`;
     return await get<TransactionList>(path, { auth: true });
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
@@ -55,7 +55,7 @@ export async function fetchTransactions(opts?: {
 /** Get a single transaction by ID */
 export async function getTransaction(transactionId: string): Promise<Transaction> {
   try {
-    return await get<Transaction>(`/transactions/${encodeURIComponent(transactionId)}`, { auth: true });
+    return await get<Transaction>(`/history/${encodeURIComponent(transactionId)}`, { auth: true });
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
     throw new NellaApiError('Failed to load transaction', 'transaction_failed');

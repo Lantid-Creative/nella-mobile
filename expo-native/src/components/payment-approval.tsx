@@ -31,7 +31,7 @@ export function PaymentApproval({ theme, receipt, user, draft, onClose, onComple
     try {
       const result = await executeTransfer(user.phone, value, {
         reference: draft?.reference || '',
-        amountMinor: Number(draft?.amount ?? 0),
+        amountMinor: draft?.amountMinor ?? Number(draft?.amount ?? 0) * 100,
         toAccount: draft?.destination || receipt.rows.find(([k]) => k === 'Recipient account')?.[1] || '',
         toBank: draft?.provider || receipt.rows.find(([k]) => k === 'Bank')?.[1] || '',
         toName: draft?.narration || receipt.rows.find(([k]) => k === 'Recipient name')?.[1] || user.name,

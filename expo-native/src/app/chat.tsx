@@ -30,6 +30,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { login, isDemoMode } from '@/lib/api-auth';
 import { post, get } from '@/lib/api-client';
+import { fetchBalance } from '@/lib/api-balance';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -57,6 +58,7 @@ export default function ChatPage() {
   const [offline, setOffline] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [swipeTip, setSwipeTip] = useState(false);
+  const [balance, setBalance] = useState<{ available: number; accountNo: string | null } | null>(null);
   const [payment, setPayment] = useState<PaymentConversation | null>(null);
   const [approval, setApproval] = useState<PaymentConversation | null>(null);
   const [chatChoices, setChatChoices] = useState<string[]>([]);
@@ -91,6 +93,13 @@ export default function ChatPage() {
       const m = await loadChat(u.phone);
       msgsRef.current = m;
       setMsgs(m);
+      // Fetch wallet balance from live API
+      try {
+        const bal = await fetchBalance();
+        setBalance({ available: bal.available, accountNo: bal.accountNo });
+      } catch {
+        // Balance unavailable — show demo message
+      }
     };
     void init();
     return () => {
@@ -187,7 +196,14 @@ export default function ChatPage() {
         if (turn.preview && turn.state.field === "review") {
           try {
             const amountMinor = Number(turn.state.draft.amount) * 100;
-            const quote = await quoteTransfer(user.phone, amountMinor, turn.state.draft.destination, turn.state.draft.provider);
+            const quote = await quoteTransfer({
+              service: 'transfer',
+              amount: turn.state.draft.amount,
+              destination: turn.state.draft.destination,
+              provider: turn.state.draft.provider,
+              narration: turn.state.draft.narration,
+              plan: turn.state.draft.plan,
+            });
             if (quote.ok) {
               // Store the reference and amount in the draft for approval
               setPayment(prev => prev && {
@@ -216,6 +232,17 @@ export default function ChatPage() {
     if (requestedPanel) {
       setPanel(requestedPanel);
       setProfileOpen(true);
+      return;
+    }
+    // Handle balance inquiries via live API
+    if (/balance|how much.*(have|left)|wallet/.test(t)) {
+      try {
+        const bal = await fetchBalance();
+        setBalance({ available: bal.available, accountNo: bal.accountNo });
+        nellaSays([{ text: `Your Nella wallet balance is ${naira(bal.available)}.` }]);
+      } catch {
+        nellaSays([{ text: 'Your wallet balance is currently unavailable.' }]);
+      }
       return;
     }
     nellaSays(demoReply(t));
@@ -488,7 +515,14 @@ export default function ChatPage() {
                       {m.card?.kind === "balance" && (
                         <View style={s.balanceCard}>
                           <Text style={s.balanceLabel}>Nella wallet</Text>
-                          <Text style={s.balanceValue}>Your wallet balance is currently unavailable.</Text>
+                          {balance ? (
+                            <>
+                              <Text style={s.balanceValue}>{naira(balance.available)}</Text>
+                              {balance.accountNo && <Text style={s.balanceLabel}>Account: {balance.accountNo}</Text>}
+                            </>
+                          ) : (
+                            <Text style={s.balanceValue}>Your wallet balance is currently unavailable.</Text>
+                          )}
                         </View>
                       )}
                       {m.card?.kind === "preview" && (

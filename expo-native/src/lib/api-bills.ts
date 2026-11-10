@@ -63,7 +63,7 @@ export type BillResponse = BillResult | BillError;
 /** Fetch all available billers (electricity, cable TV, etc.) */
 export async function fetchBillers(category?: string): Promise<Biller[]> {
   try {
-    const path = category ? `/bills/billers?category=${encodeURIComponent(category)}` : '/bills/billers';
+    const path = category ? `/bills/list?category=${encodeURIComponent(category)}` : '/bills/list';
     return await get<Biller[]>(path, { auth: true });
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
@@ -75,7 +75,7 @@ export async function fetchBillers(category?: string): Promise<Biller[]> {
 export async function fetchBillItems(billerId: string, divisionId: string, productId: string): Promise<BillItem[]> {
   try {
     return await get<BillItem[]>(
-      `/bills/items?billerId=${encodeURIComponent(billerId)}&divisionId=${encodeURIComponent(divisionId)}&productId=${encodeURIComponent(productId)}`,
+      `/bills/list?billerId=${encodeURIComponent(billerId)}&divisionId=${encodeURIComponent(divisionId)}&productId=${encodeURIComponent(productId)}`,
       { auth: true }
     );
   } catch (err) {
@@ -87,7 +87,7 @@ export async function fetchBillItems(billerId: string, divisionId: string, produ
 /** Validate a customer ID / meter number / smartcard number with VFD */
 export async function validateBillCustomer(billerId: string, divisionId: string, paymentItem: string, customerId: string): Promise<BillValidation> {
   try {
-    return await post<BillValidation>('/bills/validate', {
+    return await post<BillValidation>('/bills/list', {
       billerId,
       divisionId,
       paymentItem,

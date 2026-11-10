@@ -36,7 +36,7 @@ export interface UpdateProfileRequest {
 /** Get the authenticated user's profile and KYC status */
 export async function getProfile(): Promise<UserProfile> {
   try {
-    return await get<UserProfile>('/profile', { auth: true });
+    return await get<UserProfile>('/auth/me', { auth: true });
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
     throw new NellaApiError('Failed to load profile', 'profile_failed');
@@ -46,7 +46,7 @@ export async function getProfile(): Promise<UserProfile> {
 /** Get onboarding/KYC status */
 export async function getOnboardingStatus(): Promise<OnboardingStatus> {
   try {
-    return await get<OnboardingStatus>('/profile/onboarding-status', { auth: true });
+    return await get<OnboardingStatus>('/auth/me', { auth: true });
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
     throw new NellaApiError('Failed to load onboarding status', 'onboarding_failed');
@@ -56,7 +56,7 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
 /** Update profile details */
 export async function updateProfile(updates: UpdateProfileRequest): Promise<UserProfile> {
   try {
-    return await post<UserProfile>('/profile', updates, { auth: true });
+    return await post<UserProfile>('/auth/me', updates, { auth: true });
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
     throw new NellaApiError('Failed to update profile', 'update_failed');
@@ -71,7 +71,7 @@ export async function requestKycVerification(details: {
   address?: string;
 }): Promise<void> {
   try {
-    await post('/profile/kyc', details, { auth: true });
+    await post('/auth/me', details, { auth: true });
   } catch (err) {
     if (err instanceof NellaApiError) throw err;
     throw new NellaApiError('Kyc verification request failed', 'kyc_failed');

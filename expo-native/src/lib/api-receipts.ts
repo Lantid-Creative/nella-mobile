@@ -28,7 +28,7 @@ export type ReceiptResponse = ReceiptResult | ReceiptError;
 /** Get a payment receipt by reference (PDF download URL + preview) */
 export async function getReceipt(reference: string): Promise<ReceiptResult> {
   try {
-    const res = await get<ReceiptResult>(`/receipts/${encodeURIComponent(reference)}`, { auth: true });
+    const res = await get<ReceiptResult>(`/receipt/${encodeURIComponent(reference)}`, { auth: true });
     if (res.ok) return res;
     throw new NellaApiError(res.reason, 'receipt_failed');
   } catch (err) {
@@ -41,7 +41,7 @@ export async function getReceipt(reference: string): Promise<ReceiptResult> {
 export async function downloadReceiptPdf(reference: string): Promise<Blob> {
   try {
     const token = (globalThis as any).localStorage?.getItem('nella.auth.token') || '';
-    const res = await fetch(`https://usenella.com/api/mobile/receipts/${encodeURIComponent(reference)}/pdf`, {
+    const res = await fetch(`https://usenella.com/api/mobile/receipt/${encodeURIComponent(reference)}/pdf`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -63,7 +63,7 @@ export async function downloadReceiptPdf(reference: string): Promise<Blob> {
 export async function downloadStatementPdf(period: string): Promise<Blob> {
   try {
     const token = (globalThis as any).localStorage?.getItem('nella.auth.token') || '';
-    const res = await fetch(`https://usenella.com/api/mobile/statements/${encodeURIComponent(period)}/pdf`, {
+    const res = await fetch(`https://usenella.com/api/mobile/receipt/${encodeURIComponent(period)}/pdf`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
