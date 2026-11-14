@@ -11,6 +11,8 @@ const TOKEN_KEY = 'nella.auth.token';
 const PHONE_KEY = 'nella.auth.phone';
 const NAME_KEY = 'nella.auth.name';
 
+import * as SecureStore from 'expo-secure-store';
+
 export interface ApiUser {
   phone: string;
   full_name: string;
@@ -36,49 +38,79 @@ export class NellaApiError extends Error {
 }
 
 let authToken: string | null = null;
+let authPhone: string | null = null;
+let authName: string | null = null;
+let hydrated = false;
 
-export function setAuthToken(token: string | null) {
-  authToken = token;
-  if (token) {
-    try { localStorage.setItem(TOKEN_KEY, token); } catch {}
-  } else {
-    try { localStorage.removeItem(TOKEN_KEY); } catch {}
-  }
-}
-
-export function getAuthToken(): string | null {
-  if (authToken) return authToken;
+async function readKey(key: string): Promise<string | null> {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    return await SecureStore.getItemAsync(key);
   } catch {
     return null;
   }
 }
 
+async function writeKey(key: string, value: string | null): Promise<void> {
+  try {
+    if (value === null) {
+      await SecureStore.deleteItemAsync(key);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  } catch {}
+}
+
+/** Load the persisted session from the device keychain. Call once at startup. */
+export async function hydrateAuthSession(): Promise<void> {
+  if (hydrated) return;
+  hydrated = true;
+  const [token, phone, name] = await Promise.all([
+    readKey(TOKEN_KEY),
+    readKey(PHONE_KEY),
+    readKey(NAME_KEY),
+  ]);
+  authToken = token;
+  authPhone = phone;
+  authName = name;
+}
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  void writeKey(TOKEN_KEY, token);
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
 export function setAuthSession(phone: string, name: string, token: string) {
   authToken = token;
-  try {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(PHONE_KEY, phone);
-    localStorage.setItem(NAME_KEY, name);
-  } catch {}
+  authPhone = phone;
+  authName = name;
+  void Promise.all([
+    writeKey(TOKEN_KEY, token),
+    writeKey(PHONE_KEY, phone),
+    writeKey(NAME_KEY, name),
+  ]);
 }
 
 export function clearAuthSession() {
   authToken = null;
-  try {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(PHONE_KEY);
-    localStorage.removeItem(NAME_KEY);
-  } catch {}
+  authPhone = null;
+  authName = null;
+  void Promise.all([
+    writeKey(TOKEN_KEY, null),
+    writeKey(PHONE_KEY, null),
+    writeKey(NAME_KEY, null),
+  ]);
 }
 
 export function getStoredPhone(): string | null {
-  try { return localStorage.getItem(PHONE_KEY); } catch { return null; }
+  return authPhone;
 }
 
 export function getStoredName(): string | null {
-  try { return localStorage.getItem(NAME_KEY); } catch { return null; }
+  return authName;
 }
 
 async function request<T>(

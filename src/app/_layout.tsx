@@ -3,12 +3,10 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNellaTheme } from '@/lib/theme-context';
 import { useNellaFonts } from '@/lib/fonts';
-import { getAuthToken } from '@/lib/api-client';
 
 export default function RootLayout() {
   const { theme } = useNellaTheme();
   const fontsLoaded = useNellaFonts();
-  const token = getAuthToken();
 
   if (!fontsLoaded) {
     return (

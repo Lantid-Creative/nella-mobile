@@ -3,7 +3,7 @@
  * Connects to the live backend's document generation (src/lib/documents.ts).
  */
 
-import { get, NellaApiError } from './api-client';
+import { get, getAuthToken, NellaApiError } from './api-client';
 
 export interface ReceiptPreview {
   title: string;
@@ -40,7 +40,7 @@ export async function getReceipt(reference: string): Promise<ReceiptResult> {
 /** Download a receipt PDF as a blob */
 export async function downloadReceiptPdf(reference: string): Promise<Blob> {
   try {
-    const token = (globalThis as any).localStorage?.getItem('nella.auth.token') || '';
+    const token = getAuthToken() || '';
     const res = await fetch(`https://usenella.com/api/mobile/receipt/${encodeURIComponent(reference)}/pdf`, {
       method: 'GET',
       headers: {
@@ -62,7 +62,7 @@ export async function downloadReceiptPdf(reference: string): Promise<Blob> {
 /** Get a monthly statement PDF */
 export async function downloadStatementPdf(period: string): Promise<Blob> {
   try {
-    const token = (globalThis as any).localStorage?.getItem('nella.auth.token') || '';
+    const token = getAuthToken() || '';
     const res = await fetch(`https://usenella.com/api/mobile/receipt/${encodeURIComponent(period)}/pdf`, {
       method: 'GET',
       headers: {

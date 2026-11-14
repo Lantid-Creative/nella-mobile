@@ -4,24 +4,29 @@ import { useNellaTheme } from '@/lib/theme-context';
 import { NellaMascot } from '@/components/nella-mascot';
 import { router } from 'expo-router';
 import { canEnterChat } from '@/lib/demo-store';
-import { getAuthToken } from '@/lib/api-client';
+import { getAuthToken, hydrateAuthSession } from '@/lib/api-client';
 
 export default function SplashScreen() {
   const { theme } = useNellaTheme();
   const [leaving, setLeaving] = useState(false);
-  const token = getAuthToken();
 
   useEffect(() => {
+    let active = true;
     const go = async () => {
+      await hydrateAuthSession();
+      const token = getAuthToken();
+      if (!active) return;
       setLeaving(true);
       await new Promise((r) => setTimeout(r, 260));
       const user = await canEnterChatCheck(token);
-      router.replace(user ? '/chat' : '/auth');
+      if (active) router.replace(user ? '/chat' : '/auth');
     };
-    const timeout = token ? 1200 : 1900;
-    const t = setTimeout(go, timeout);
-    return () => clearTimeout(t);
-  }, [token, router]);
+    const t = setTimeout(go, 600);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, []);
 
   return (
     <View style={[styles.surface, { backgroundColor: theme.colors.background }]}>
