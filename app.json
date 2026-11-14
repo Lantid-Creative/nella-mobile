@@ -65,6 +65,12 @@
         "projectId": "06dc511c-1ace-40fd-9eb3-21f4e3b07af8"
       }
     },
-    "owner": "damilola-yinusas-team"
+    "owner": "damilola-yinusas-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/06dc511c-1ace-40fd-9eb3-21f4e3b07af8"
+    }
   }
 }
