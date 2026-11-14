@@ -27,6 +27,12 @@ import { VoiceNoteControl } from '@/components/voice-note-control';
 import * as ImagePicker from 'expo-image-picker';
 import * as CameraExpo from 'expo-camera';
 import * as Haptics from 'expo-haptics';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from 'expo-audio';
 import { router } from 'expo-router';
 import { login, isDemoMode } from '@/lib/api-auth';
 import { post, get } from '@/lib/api-client';
@@ -117,16 +123,16 @@ export default function ChatPage() {
     }
   }, [msgs, followsBottom]);
 
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const voiceInterval = useRef<any>(null);
+
   useEffect(() => {
     return () => {
-      if (audioRecording.current) {
-        void audioRecording.current.stopAndUnloadAsync().catch(() => {});
-      }
+      try {
+        void audioRecorder.stop();
+      } catch {}
     };
-  }, []);
-
-  const audioRecording = useRef<any>(null);
-  const voiceInterval = useRef<any>(null);
+  }, [audioRecorder]);
 
   const commit = async (next: ChatMsg[]) => {
     msgsRef.current = next;
@@ -311,12 +317,17 @@ export default function ChatPage() {
 
   const startVoice = async () => {
     try {
-      const { Audio } = require("expo-av");
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilenceModeIOS: true });
-      const rec = new Audio.Recording();
-      await rec.prepareToRecordAsync(Audio.RecordingPresets.HIGH_QUALITY);
-      await rec.startAsync();
-      audioRecording.current = rec;
+      const permission = await requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        setNotice("Microphone access is needed to record a voice note.");
+        return;
+      }
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      if (audioRecorder.isRecording) {
+        await audioRecorder.stop();
+      }
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
       const startTime = Date.now();
       setVoiceMode("recording");
       setVoiceSeconds(0);
@@ -329,17 +340,13 @@ export default function ChatPage() {
 
   const stopVoice = async () => {
     try {
-      const rec = audioRecording.current;
-      if (rec) {
-        await rec.stopAndUnloadAsync();
-        const uri = rec.getURI?.();
-        if (uri) {
-          setVoiceUrl(uri);
-          setVoiceMode("review");
-        }
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+      if (uri) {
+        setVoiceUrl(uri);
+        setVoiceMode("review");
       }
       if (voiceInterval.current) clearInterval(voiceInterval.current);
-      audioRecording.current = null;
     } catch {
       setVoiceMode("idle");
     }
@@ -350,10 +357,9 @@ export default function ChatPage() {
     setVoiceUrl("");
     setVoiceSeconds(0);
     if (voiceInterval.current) clearInterval(voiceInterval.current);
-    if (audioRecording.current) {
-      try { void audioRecording.current.stopAndUnloadAsync(); } catch {}
-      audioRecording.current = null;
-    }
+    try {
+      if (audioRecorder.isRecording) void audioRecorder.stop();
+    } catch {}
   };
 
   const sendVoice = () => {
