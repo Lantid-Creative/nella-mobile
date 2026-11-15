@@ -169,6 +169,23 @@ function ChatPage() {
   const msgsRef = useRef<ChatMsg[]>([]);
   const objectUrlsRef = useRef<string[]>([]);
   useChatViewport(scrollRef, followsBottom);
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const resize = () => {
+      input.style.height = "0px";
+      input.style.height = `${input.scrollHeight}px`;
+      if (followsBottom.current && scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    // Observe width/viewport changes without observing the textarea's own height.
+    if (input.parentElement) observer.observe(input.parentElement);
+    window.visualViewport?.addEventListener("resize", resize);
+    return () => { observer.disconnect(); window.visualViewport?.removeEventListener("resize", resize); };
+  }, [text]);
   const scrollToLatest = (behavior: ScrollBehavior = "auto") => {
     const conversation = scrollRef.current;
     conversation?.scrollTo({ top: conversation.scrollHeight, behavior });
@@ -752,7 +769,7 @@ function ChatPage() {
           e.preventDefault();
           send(text);
         }}
-        className="chat-composer mx-auto w-full max-w-2xl shrink-0 border-t border-border bg-card px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5"
+        className="chat-composer mx-auto w-full max-w-2xl shrink-0 px-2 sm:px-5"
       >
         {pendingPhoto && (
           <div role="dialog" aria-modal="true" aria-label="Send photo" className="photo-review fixed left-0 right-0 z-50 flex flex-col bg-foreground text-background">
@@ -878,7 +895,7 @@ function ChatPage() {
           className="hidden"
           aria-label="Choose a bill photo"
         />
-        <div className="glass relative flex items-end gap-0.5 rounded-3xl border border-border p-1.5 sm:gap-1 sm:p-2">
+        <div className="relative flex items-end gap-2">
           {photoMenu && (
             <div
               role="group"
@@ -910,6 +927,7 @@ function ChatPage() {
               </Button>
             </div>
           )}
+          <div className="composer-field flex min-w-0 flex-1 items-end rounded-[24px] border border-border bg-card p-1">
           <Button variant="plain" size="none"
             type="button"
             onClick={() => setPhotoMenu((open) => !open)}
@@ -917,7 +935,7 @@ function ChatPage() {
             aria-expanded={photoMenu}
             aria-controls="photo-options"
             title="Add attachment"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
           >
             <Plus className="h-5 w-5" />
           </Button>
@@ -927,11 +945,7 @@ function ChatPage() {
             disabled={voiceMode === "recording"}
             rows={1}
             value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              e.target.style.height = "auto";
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
-            }}
+            onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if (shouldSendOnEnter({ key: e.key, shiftKey: e.shiftKey, isComposing: e.nativeEvent.isComposing }, window.matchMedia("(pointer: coarse)").matches)) {
                 e.preventDefault();
@@ -940,14 +954,17 @@ function ChatPage() {
             }}
             placeholder="Message Nella…"
             aria-label="Message Nella"
-            className="max-h-32 min-w-0 flex-1 resize-none rounded-lg bg-transparent px-1 py-2 text-base text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            enterKeyHint="enter"
+            className="composer-input min-w-0 flex-1 resize-none bg-transparent pl-1 pr-3 text-base text-foreground placeholder:text-muted-foreground outline-none"
           />
+          </div>
           {text.trim() ? (
             <Button variant="plain" size="none"
               type="submit"
               disabled={typing}
               aria-label="Send message"
-              className="shadow-glow flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+              onPointerDown={(event) => event.preventDefault()}
+              className="mb-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
             >
               <ArrowUp className="h-5 w-5" />
             </Button>
