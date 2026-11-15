@@ -147,7 +147,12 @@
 @keyframes nella-hello { 0%, 100% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-5px) rotate(-3deg); } 65% { transform: translateY(-3px) rotate(2deg); } }
 .chat-surface { background: var(--background); position: fixed; top: var(--app-top, 0px); left: 0; right: 0; }
 html[data-chat-open], html[data-chat-open] body { overflow: hidden; overscroll-behavior: none; }
-html[data-chat-keyboard] .chat-composer { padding-bottom: 0.5rem; }
+.chat-composer { padding-top: 0.5rem; padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+.composer-field { box-shadow: var(--shadow-glow); transition: border-color 150ms ease; }
+.composer-field:focus-within { border-color: var(--ring); }
+.composer-input { display: block; box-sizing: border-box; min-height: 44px; max-height: clamp(44px, calc(var(--app-height, 100dvh) * 0.22), 128px); padding-top: 10px; padding-bottom: 10px; line-height: 24px; overflow-y: auto; overscroll-behavior: contain; scroll-padding-block: 10px; }
+.chat-composer > .relative > button { margin-bottom: 4px; }
+html[data-chat-keyboard] .chat-composer { padding-top: 0.375rem; padding-bottom: 0.375rem; }
 html[data-chat-keyboard] .chat-surface > header { padding-top: 0.5rem; padding-bottom: 0.5rem; }
 html[data-chat-keyboard] .chat-welcome-mascot { width: 5rem; height: 5rem; }
 .auth-surface { background: var(--background); }
@@ -181,4 +186,4 @@ html[data-chat-keyboard] .nella-profile, html[data-chat-keyboard] .nella-approva
 @keyframes pin-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 .message-enter { animation: message-in 220ms ease-out both; }
 .pin-shake { animation: pin-shake 260ms ease-in-out 2; }
-@media (prefers-reduced-motion: reduce) { .message-enter, .pin-shake { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .message-enter, .pin-shake { animation: none; } .composer-field { transition: none; } }
