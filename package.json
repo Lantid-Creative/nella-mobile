@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
+    "dev": "bun install --cwd web && bun run --cwd web dev",
+    "build": "bun install --cwd web && bun run --cwd web build && rm -rf dist && cp -R web/dist dist",
+    "build:dev": "bun install --cwd web && bun run --cwd web build:dev && rm -rf dist && cp -R web/dist dist",
+    "preview": "bun run --cwd web preview",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

@@ -1,0 +1,1 @@
+- Keep the existing phone-app source and commands intact; Lovable dev/build commands delegate to the saved TanStack app in `web/`, copying its build output to root `dist/` so hosting can find it without converting or deleting the phone app.
