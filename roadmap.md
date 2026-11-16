@@ -1,5 +1,6 @@
 # Nella WhatsApp-to-app coverage
 
+- [ ] Refine the chat message box, multiline sizing and keyboard-open layout; verify sending and simulated phone keyboard changes.
 - [ ] Remove profile close X, stabilize expand/collapse swipes and verify profile Back and message gestures on mobile browser sizes.
 - [x] Fix mobile chat keyboard positioning, conversation-only scrolling, photo controls and visible-viewport sheets; verified payment chat, multiline typing, simulated keyboard resizing/panning and 320/393/768/852/1280 layouts. Physical-device keyboard verification remains required below.
 - [x] Require post-signup demo KYC identity/address review before chat; verified signup, direct-entry blocking, recovery and legacy-account gates at 320/393/1280 widths; all 48 tests pass. Live identity verification remains blocked by the absent secure provider connection.
