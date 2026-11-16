@@ -1,62 +1,22 @@
-import { TextInput, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
-import type { NellaTheme } from '@/lib/theme';
+import * as React from "react";
 
-interface InputProps {
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder?: string;
-  keyboardType?: 'default' | 'numeric' | 'email-address';
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  secureTextEntry?: boolean;
-  disabled?: boolean;
-  theme: NellaTheme;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
-  maxLength?: number;
-  autoFocus?: boolean;
-}
+import { cn } from "@/lib/utils";
 
-export function Input({
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType = 'default',
-  autoCapitalize = 'sentences',
-  secureTextEntry = false,
-  disabled = false,
-  theme,
-  style,
-  textStyle,
-  maxLength,
-  autoFocus,
-}: InputProps) {
-  return (
-    <TextInput
-      style={[
-        {
-          backgroundColor: theme.colors.card,
-          borderWidth: 1,
-          borderColor: theme.colors.input,
-          borderRadius: 12,
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          color: theme.colors.foreground,
-          fontSize: 16,
-          fontFamily: theme.fontFamily,
-          minHeight: 52,
-        },
-        disabled && { opacity: 0.6 },
-        style,
-      ]}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      keyboardType={keyboardType}
-      autoCapitalize={autoCapitalize}
-      secureTextEntry={secureTextEntry}
-      editable={!disabled}
-      maxLength={maxLength}
-      autoFocus={autoFocus}
-    />
-  );
-}
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(
+          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+Input.displayName = "Input";
+
+export { Input };

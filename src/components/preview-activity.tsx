@@ -1,0 +1,129 @@
+import { useState } from "react";
+import { ArrowLeft, ArrowRight, FileText, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { naira } from "@/lib/demo-store";
+import {
+  SERVICE_LABELS,
+  type MoneyService,
+  type PaymentDraft,
+  type ReceiptPreview,
+} from "@/lib/app-provisions";
+import { draftFromPreview, filterPreviews } from "@/lib/preview-workspace";
+
+export function PreviewActivity({
+  previews,
+  onReuse,
+}: {
+  previews: ReceiptPreview[];
+  onReuse: (draft: PaymentDraft) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [service, setService] = useState<MoneyService | "all">("all");
+  const [selected, setSelected] = useState<ReceiptPreview | null>(null);
+  if (selected) {
+    const draft = draftFromPreview(selected);
+    return (
+      <div className="space-y-5">
+        <Button variant="ghost" className="h-11 px-0" onClick={() => setSelected(null)}>
+          <ArrowLeft />
+          Prepared payments
+        </Button>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground">
+            PAYMENT BREAKDOWN · NOT SUBMITTED
+          </p>
+          <h3 className="mt-2 font-bold">{selected.title}</h3>
+          <p className="mt-2 break-all text-2xl font-extrabold">{naira(selected.amount)}</p>
+        </div>
+        <dl className="divide-y divide-border">
+          {selected.rows
+            .filter(([key]) => !["Reference", "Session ID", "Status"].includes(key))
+            .map(([key, value], index) => (
+              <div key={`${key}-${index}`} className="grid grid-cols-2 gap-3 py-3 text-sm">
+                <dt className="text-muted-foreground">{key}</dt>
+                <dd className="break-words text-right font-semibold">{value}</dd>
+              </div>
+            ))}
+        </dl>
+        {draft && (
+          <Button className="h-12 w-full" onClick={() => onReuse(draft)}>
+            Use these details
+            <ArrowRight />
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Reusing details prepares a new draft. No payment is sent.
+        </p>
+      </div>
+    );
+  }
+  const matches = filterPreviews(previews, query, service).slice().reverse();
+  return (
+    <section className="space-y-4">
+      <div className="border-b border-border pb-4">
+        <p className="text-xs font-semibold text-primary">PREPARED PAYMENTS</p>
+        <h3 className="mt-2 text-lg font-bold">Your prepared payments</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          No money has moved. These payments have not been submitted.
+        </p>
+      </div>
+      {previews.length > 0 ? (
+        <>
+          <label className="relative block">
+            <Search className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
+            <input
+              aria-label="Search prepared payments"
+              className="h-12 w-full rounded-lg border border-input bg-card pl-10 pr-3 text-base"
+              placeholder="Search amount, bank or recipient"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <select
+            aria-label="Filter prepared payments"
+            className="h-12 w-full rounded-lg border border-input bg-card px-3 text-base"
+            value={service}
+            onChange={(event) => setService(event.target.value as MoneyService | "all")}
+          >
+            <option value="all">All services</option>
+            {(Object.keys(SERVICE_LABELS) as MoneyService[]).map((key) => (
+              <option key={key} value={key}>
+                {SERVICE_LABELS[key]}
+              </option>
+            ))}
+          </select>
+          <div className="divide-y divide-border">
+            {matches.map((receipt, index) => (
+              <Button
+                key={index}
+                variant="ghost"
+                className="h-auto min-h-20 w-full justify-between gap-3 whitespace-normal px-0 text-left"
+                onClick={() => setSelected(receipt)}
+              >
+                <span className="min-w-0">
+                  <span className="block font-semibold">{receipt.title}</span>
+                  <span className="mt-1 block break-all text-sm">{naira(receipt.amount)}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">Not submitted</span>
+                </span>
+                <ArrowRight className="shrink-0" />
+              </Button>
+            ))}
+          </div>
+          {matches.length === 0 && (
+            <p role="status" className="py-8 text-center text-sm text-muted-foreground">
+              No prepared payments match your search.
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="py-8 text-center">
+          <FileText className="mx-auto mb-3 h-8 w-8 text-primary" />
+          <p className="font-semibold">No prepared payments yet</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Payment breakdowns appear here, separate from completed transactions.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}

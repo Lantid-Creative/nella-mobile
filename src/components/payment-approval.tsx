@@ -1,147 +1,149 @@
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
-import { useState } from 'react';
-import { LockKeyhole, ShieldCheck } from 'lucide-react-native';
-import type { NellaTheme } from '@/lib/theme';
-import { naira } from '@/lib/demo-store';
-import type { ReceiptPreview, PaymentDraft } from '@/lib/app-provisions';
-import { Button } from '@/components/ui/button';
-import { executeTransfer } from '@/lib/api-transfers';
+import { useEffect, useState, type FormEvent } from "react";
+import { LockKeyhole, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { naira, type DemoUser } from "@/lib/demo-store";
+import type { ReceiptPreview } from "@/lib/app-provisions";
+import { demoApprovalError } from "@/lib/payment-approval";
 
-interface PaymentApprovalProps {
-  theme: NellaTheme;
+export function PaymentApproval({
+  receipt,
+  user,
+  onClose,
+  onComplete,
+}: {
   receipt: ReceiptPreview;
-  user: any;
-  draft?: PaymentDraft;
+  user: DemoUser;
   onClose: () => void;
   onComplete: () => void;
-  visible: boolean;
-}
-
-export function PaymentApproval({ theme, receipt, user, draft, onClose, onComplete, visible }: PaymentApprovalProps) {
-  const s = createStyles(theme);
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
-  const [shake, setShake] = useState<number>(0);
-
-  const close = () => { setPin(''); setError(''); onClose(); };
-
-  const check = async (value: string) => {
-    setPin('');
-    
-    // Try live API first
-    try {
-      const result = await executeTransfer(user.phone, value, {
-        reference: draft?.reference || '',
-        amountMinor: draft?.amountMinor ?? Number(draft?.amount ?? 0) * 100,
-        toAccount: draft?.destination || receipt.rows.find(([k]) => k === 'Recipient account')?.[1] || '',
-        toBank: draft?.provider || receipt.rows.find(([k]) => k === 'Bank')?.[1] || '',
-        toName: draft?.narration || receipt.rows.find(([k]) => k === 'Recipient name')?.[1] || user.name,
-      });
-      
-      if (result.ok) {
-        onComplete();
-        return;
+}) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const close = () => {
+    setPin("");
+    setError("");
+    onClose();
+  };
+  useEffect(() => {
+    const visibility = () => {
+      if (document.hidden) {
+        setPin("");
+        setError("");
+        onClose();
       }
-      // API returned an error result
-      setError(result.message || 'Payment failed. Try again.');
+    };
+    const leave = () => {
+      setPin("");
+      onClose();
+    };
+    document.addEventListener("visibilitychange", visibility);
+    window.addEventListener("pagehide", leave);
+    return () => {
+      document.removeEventListener("visibilitychange", visibility);
+      window.removeEventListener("pagehide", leave);
+    };
+  }, [onClose]);
+  const [shake, setShake] = useState(0);
+  const check = (value: string) => {
+    const problem = demoApprovalError(value, user);
+    setPin("");
+    if (problem) {
+      setError(problem);
       setShake((n) => n + 1);
-      return;
-    } catch (err: any) {
-      // API unavailable or network error - fall back to demo PIN check
-      if (value !== user.pin) {
-        setError('Incorrect demo PIN. Try again.');
-        setShake((n) => n + 1);
-        return;
+      try {
+        navigator.vibrate?.([30, 40, 30]);
+      } catch {
+        /* unsupported */
       }
-      onComplete();
       return;
     }
+    onComplete();
   };
-
-  const submit = () => check(pin);
-
-  if (!visible) return null;
-
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    check(pin);
+  };
   return (
-    <View style={[s.container, { opacity: visible ? 1 : 0 }]}>
-      <View style={s.overlay} />
-      <View style={s.dialog}>
-        <View style={s.dialogHeader}>
-          <View style={s.lockIcon}>
-            <LockKeyhole size={20} strokeWidth={2} color={theme.colors.primary} />
-          </View>
-          <View style={s.dialogTitleWrap}>
-            <Text style={s.dialogTitle}>Approve payment</Text>
-            <Text style={s.dialogDesc}>Demo approval only · No money will move</Text>
-          </View>
-        </View>
-        <View style={s.divider} />
-        <View style={s.receiptWrap}>
-          <Text style={s.receiptTitle}>{receipt.title}</Text>
-          <Text style={s.receiptAmount}>{naira(receipt.amount)}</Text>
-          <View style={s.receiptRows}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) close();
+      }}
+    >
+      <DialogContent className="nella-approval left-0 top-auto bottom-0 max-h-[calc(var(--app-height,100dvh)-1rem)] overflow-y-auto translate-x-0 translate-y-0 rounded-t-2xl px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <div className="pr-12">
+          <LockKeyhole className="mb-3 h-6 w-6 text-primary" />
+          <DialogTitle>Approve payment</DialogTitle>
+          <DialogDescription className="mt-2">
+            Demo approval only · No money will move
+          </DialogDescription>
+        </div>
+        <div className="border-y border-border py-4">
+          <p className="text-sm font-semibold">{receipt.title}</p>
+          <p className="mt-1 break-all text-2xl font-extrabold">{naira(receipt.amount)}</p>
+          <dl className="mt-3 space-y-2 text-sm">
             {receipt.rows
-              .filter(([key]) => ["Recipient account", "Phone number", "Meter number", "Smartcard number", "Bank", "Provider", "Plan / package", "Narration"].includes(key))
+              .filter(([key]) =>
+                [
+                  "Recipient account",
+                  "Phone number",
+                  "Meter number",
+                  "Smartcard number",
+                  "Bank",
+                  "Provider",
+                  "Plan / package",
+                  "Narration",
+                ].includes(key),
+              )
               .map(([key, value]) => (
-                <View key={key} style={s.receiptRow}>
-                  <Text style={s.receiptRowKey}>{key}</Text>
-                  <Text style={s.receiptRowValue}>{value}</Text>
-                </View>
+                <div key={key} className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">{key}</dt>
+                  <dd className="min-w-0 break-all text-right font-semibold">{value}</dd>
+                </div>
               ))}
-          </View>
-          <Text style={s.receiptNote}>Recipient, availability and fees are not verified.</Text>
-        </View>
-        <View style={s.form}>
-          <Text style={s.pinLabel}>4-digit demo PIN</Text>
-          <TextInput
-            style={[s.pinInput, shake % 2 === 1 ? s.pinShake : {}]}
-            value={pin}
-            onChangeText={(v) => {
-              const value = v.replace(/\D/g, '').slice(0, 4);
-              setPin(value);
-              setError('');
-              if (value.length === 4) check(value);
-            }}
-            keyboardType="numeric"
-            maxLength={4}
-            autoFocus
-          />
-          <Text style={s.pinNote}>Use the test PIN from your demo account, never your banking PIN.</Text>
-          {error && <Text style={s.errorText}>{error}</Text>}
-          <Button theme={theme} variant="default" disabled={pin.length !== 4} onPress={submit}>
-            <ShieldCheck size={18} strokeWidth={2} color={theme.colors.primaryForeground} style={{ marginRight: 6 }} /> Confirm demo approval
+          </dl>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Recipient, availability and fees are not verified.
+          </p>
+        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <label className="block text-sm font-semibold">
+            4-digit demo PIN
+            <input
+              aria-label="4-digit demo PIN"
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={4}
+              value={pin}
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, "").slice(0, 4);
+                setPin(value);
+                setError("");
+                if (value.length === 4) check(value);
+              }}
+              key={shake}
+              className={`${shake ? "pin-shake " : ""}mt-2 h-14 w-full rounded-lg border border-input bg-card px-4 text-center text-xl tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+              autoFocus
+            />
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Use the test PIN from your demo account, never your banking PIN.
+          </p>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <Button type="submit" disabled={pin.length !== 4} className="h-12 w-full">
+            <ShieldCheck />
+            Confirm demo approval
           </Button>
-          <Button theme={theme} variant="outline" onPress={close}>Back to chat</Button>
-        </View>
-      </View>
-    </View>
+          <Button type="button" variant="outline" className="h-11 w-full" onClick={close}>
+            Back to chat
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
-}
-
-function createStyles(theme: NellaTheme) {
-  return StyleSheet.create({
-    container: { flex: 1, justifyContent: 'flex-end' },
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-    dialog: { backgroundColor: theme.colors.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 24, maxHeight: '85%' },
-    dialogHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
-    lockIcon: { width: 24, height: 24 },
-    dialogTitleWrap: { flex: 1 },
-    dialogTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.foreground },
-    dialogDesc: { fontSize: 13, color: theme.colors.mutedForeground, marginTop: 2 },
-    divider: { height: 1, backgroundColor: theme.colors.border, marginVertical: 12 },
-    receiptWrap: { paddingHorizontal: 20 },
-    receiptTitle: { fontSize: 15, fontWeight: '600', color: theme.colors.foreground },
-    receiptAmount: { fontSize: 28, fontWeight: '800', color: theme.colors.foreground, marginTop: 4 },
-    receiptRows: { marginTop: 12 },
-    receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2 },
-    receiptRowKey: { fontSize: 13, color: theme.colors.mutedForeground },
-    receiptRowValue: { fontSize: 13, fontWeight: '600', color: theme.colors.foreground, textAlign: 'right' },
-    receiptNote: { fontSize: 11, color: theme.colors.mutedForeground, marginTop: 10 },
-    form: { paddingHorizontal: 20, gap: 12 },
-    pinLabel: { fontSize: 14, fontWeight: '600', color: theme.colors.foreground },
-    pinInput: { height: 56, borderWidth: 1, borderColor: theme.colors.input, borderRadius: 12, backgroundColor: theme.colors.card, color: theme.colors.foreground, fontSize: 20, textAlign: 'center', fontFamily: 'monospace' },
-    pinShake: {},
-    pinNote: { fontSize: 12, color: theme.colors.mutedForeground, marginTop: 2 },
-    errorText: { fontSize: 13, color: theme.colors.destructive, marginTop: 4 },
-  });
 }

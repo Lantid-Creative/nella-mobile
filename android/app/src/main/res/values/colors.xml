@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nella brand colours, matching the tokens in src/styles.css. -->
+    <color name="colorPrimary">#2168F2</color>
+    <color name="colorPrimaryDark">#0E24A3</color>
+    <color name="colorAccent">#2168F2</color>
+
+    <!-- The native splash background, so there is no flash between the
+         system splash and the web view. -->
+    <color name="splashBackground">#080D18</color>
+</resources>

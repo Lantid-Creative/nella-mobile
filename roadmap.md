@@ -1,0 +1,33 @@
+# Nella WhatsApp-to-app coverage
+
+- [ ] Remove profile close X, stabilize expand/collapse swipes and verify profile Back and message gestures on mobile browser sizes.
+- [x] Fix mobile chat keyboard positioning, conversation-only scrolling, photo controls and visible-viewport sheets; verified payment chat, multiline typing, simulated keyboard resizing/panning and 320/393/768/852/1280 layouts. Physical-device keyboard verification remains required below.
+- [x] Require post-signup demo KYC identity/address review before chat; verified signup, direct-entry blocking, recovery and legacy-account gates at 320/393/1280 widths; all 48 tests pass. Live identity verification remains blocked by the absent secure provider connection.
+- [x] Require onboarding completion before chat; verified mobile signup, direct-entry blocking, refresh recovery and completed-account entry, with 18 account/biometric/approval tests passing.
+- [x] Add fingerprint/face unlock (WebAuthn platform authenticator): optional setup after signup, manage in Security & PIN, unlock button on login, PIN fallback preserved; verified with a virtual authenticator on mobile viewport.
+- [x] Replace downloadable previews with simple payment breakdowns in chat and prepared-payment details; remove download/share actions, preserve PIN approval, and verify mobile flow plus 39 tests.
+- [x] Add private four-digit demo PIN approval for the active chat payment, with review, invalid-PIN feedback, cancellation and no live submission; verified mobile signup-to-approval flow and all 39 tests.
+- [x] Support natural payment requests, bank aliases and “for me” phone targeting while asking only for missing details; verified all three requested examples after signup on mobile, with 36 tests passing. Live payments remain deferred.
+- [x] Add in-app snap-to-pay camera with pinch/slider zoom (native lens zoom when supported, digital crop otherwise), review/retake, and native-camera fallback; verified in mobile browser flow.
+- [x] Replace payment-entry sheets with progressive chat conversations, in-chat edits/cancellation, photo/voice fallback and preview reuse; tests and mobile browser flow verified. Transcription, photo extraction and live payments remain unconnected.
+- [x] Continue frontend-only mobile building: guided payment steps, searchable preview activity, preview details/share/reuse, and mobile regression checks; all 24 tests passed, live connections deferred.
+- [x] Implement mobile reply cancellation, history-aware scrolling/pagination, sheet navigation/draft retention, storage validation, intent corrections and accessibility improvements.
+- [x] Verify demo customer journey, close/back/draft/focus regressions at mobile/landscape/desktop sizes; all 21 tests passed.
+- [ ] Connect existing customer services — blocked: source exposes merchant APIs, not a verified personal-customer login/account adapter.
+- [x] Outline prioritized mobile functionality, UI/UX, optimization, fixes and launch acceptance criteria.
+- [x] Audit the original repository's customer WhatsApp functionality.
+- [x] Provision mobile chat sheets for onboarding, payment previews, account funding, activity, notifications, support and supporting-service availability.
+- [x] Document full source coverage and integration gaps; verify mobile demo flows and 13 tests.
+- [ ] Connect verified account, payment, notification, receipt, support and merchant services — blocked by this app's absent approved service connection and credentials; never treat the source snapshot as live access.
+- [ ] Verify real iOS/Android keyboard behavior, push and release packaging — blocked by unavailable native device/release setup and the undecided distribution path.
+
+## Mobile UX plan (Nov 5)
+
+- [x] Complete requested batch: phone formatting/PIN auto-check, profile/KYC checkpoint resume, breakdown edits/reuse, voice hold/slide-cancel/review, microphone/private approval interruption recovery; browser flows verified at 320/393/852/1280 widths.
+- [ ] Run physical iPhone/Android acceptance checks — blocked: no physical devices available in this workspace.
+- [x] Chat: date dividers, message grouping, gentle message animation, swipe tip, Copy in hold menu
+- [x] Time-of-day greeting; payment step tracker with Cancel; searchable long lists
+- [x] PIN auto-check with shake; sign-out confirmation; offline banner; faster splash for returning customers
+- [x] Login polish (phone formatting, PIN auto-advance), setup progress bar + resume
+- [x] Prepared-payment repeat shortcut and edit controls on active breakdown card; fresh review required.
+- [x] Hold-to-record voice with slide-to-cancel, playback review and background cancellation; phone camera remains native capture, not a custom guide frame.

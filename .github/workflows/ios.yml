@@ -1,0 +1,119 @@
+name: iOS
+
+# Builds the iOS app and uploads it to TestFlight.
+#
+# Required repository secrets (see docs/store-release.md):
+#   APP_STORE_CONNECT_KEY_ID       — the API key id from App Store Connect
+#   APP_STORE_CONNECT_ISSUER_ID    — the issuer id of that key
+#   APP_STORE_CONNECT_KEY_CONTENT  — the .p8 key, base64 encoded
+#   APP_STORE_CONNECT_KEY_PASSWORD — the key's password
+#
+# The signing certificate and provisioning profile are created by Xcode from
+# the Apple Developer account during the archive step.
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Upload to TestFlight"
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "ios-v*"
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and upload to TestFlight
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.app
+
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build the app bundle
+        run: bun run build:app
+
+      - name: Sync the native project
+        run: bunx cap sync ios
+
+      - name: Resolve Swift packages
+        working-directory: ios/App
+        run: xcodebuild -resolvePackageDependencies -workspace App.xcworkspace -scheme App
+
+      - name: Archive
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Nella.xcarchive" \
+            -allowProvisioningUpdates \
+            archive
+
+      - name: Export the IPA
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>${{ vars.APPLE_TEAM_ID }}</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>destination</key>
+            <string>upload</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/Nella.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa"
+
+      - name: Save the IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nella-ios-ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 30
+
+      - name: Upload to TestFlight
+        if: ${{ inputs.upload != false }}
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
+          KEY_PASSWORD: ${{ secrets.APP_STORE_CONNECT_KEY_PASSWORD }}
+        run: |
+          echo "$KEY_CONTENT" | base64 --decode > "$RUNNER_TEMP/AuthKey_${KEY_ID}.p8"
+          xcrun altool \
+            --upload-app \
+            --file "$RUNNER_TEMP"/ipa/*.ipa \
+            --type ios \
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER_ID" \
+            --verbose

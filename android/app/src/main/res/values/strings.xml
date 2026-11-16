@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nella</string>
+    <string name="title_activity_main">Nella</string>
+    <string name="package_name">creative.lantid.nella</string>
+    <string name="custom_url_scheme">creative.lantid.nella</string>
+</resources>

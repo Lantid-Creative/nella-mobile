@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  The demo build keeps everything on the device: the account, the chat and
+	  the payment previews live in the web view's local storage and are never
+	  transmitted. Nothing is collected, nothing is tracked, and no third-party
+	  domains are contacted for tracking.
+
+	  When the live Nella services are connected, NSPrivacyCollectedDataTypes has
+	  to be updated to declare what the app starts collecting (contact details,
+	  financial information, ...) and the App Store privacy label must match.
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>
