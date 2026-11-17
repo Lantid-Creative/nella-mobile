@@ -326,14 +326,18 @@ build that no longer exists.
 
 ## 6. If a run fails
 
-| Symptom                                                   | Cause                                                                                                      |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `store.config.json still holds the placeholder siteUrl`   | Fill in §0.                                                                                                |
-| iOS: `No profiles for 'creative.lantid.nella' were found` | `APPLE_TEAM_ID` is wrong or the App ID is not registered.                                                  |
-| iOS: authentication error                                 | The `.p8` in `APP_STORE_CONNECT_KEY_CONTENT` must be the raw file contents, and the key needs App Manager. |
-| Android: `Version code 1 has already been used`           | Bump: `./gradlew bundleRelease -PversionCode=2`.                                                           |
-| Android: `Package not found`                              | The app record does not exist yet, or the service account was not granted access to it.                    |
-| Play rejects the listing                                  | The content rating or data safety declaration is still empty.                                              |
+| Symptom                                                   | Cause                                                                                                                                                                                                                                   |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store.config.json still holds the placeholder siteUrl`   | Fill in §0.                                                                                                                                                                                                                             |
+| iOS: `No profiles for 'creative.lantid.nella' were found` | `APPLE_TEAM_ID` is wrong or the App ID is not registered.                                                                                                                                                                               |
+| iOS: authentication error                                 | The `.p8` in `APP_STORE_CONNECT_KEY_CONTENT` must be the raw file contents, and the key needs App Manager.                                                                                                                              |
+| Android: `Version code 1 has already been used`           | Bump: `./gradlew bundleRelease -PversionCode=2`.                                                                                                                                                                                        |
+| Android: `Package not found`                              | The app record does not exist yet, or the service account was not granted access to it.                                                                                                                                                 |
+| Play rejects the listing                                  | The content rating or data safety declaration is still empty.                                                                                                                                                                           |
+| Play: `The caller does not have permission`               | The service account was not granted access to the app in **Users and permissions**, or lacks the Release manager role.                                                                                                                  |
+| Play refuses the very first upload                        | A brand-new app sometimes needs its first release uploaded by hand so Play App Signing can be enrolled. Download the run's `Nella-android-aab` artifact, upload it in the console, then let the workflow handle every release after it. |
+| iOS: `Could not find option 'api_key'`                    | A lane is passing an option gym does not accept. Signing is handed to xcodebuild through `xcargs`; see `signing_xcargs` in the Fastfile.                                                                                                |
+| iOS: `No signing certificate "iOS Distribution" found`    | The API key cannot create certificates. Give the key the **App Manager** role, or create a distribution certificate once in Xcode with the same team.                                                                                   |
 
 ---
 
