@@ -64,10 +64,46 @@ def listing_urls
   }
 end
 
-# xcodebuild can provision automatically, but only once it knows the team.
+# xcodebuild can provision automatically, but only once it knows which team to
+# ask and can authenticate as the App Store Connect key. `gym` takes no api_key
+# option, so the key is handed to xcodebuild the way Apple documents it. The
+# .p8 arrives as a secret, so it only exists as a file for the length of a job.
+def write_auth_key
+  content = ENV["APP_STORE_CONNECT_KEY_CONTENT"].to_s
+  return nil if content.strip.empty?
+
+  path = File.join(Dir.tmpdir, "AuthKey_#{ENV.fetch("APP_STORE_CONNECT_KEY_ID")}.p8")
+  File.write(path, content)
+  File.chmod(0o600, path)
+  path
+end
+
+def signing_args(with_team: true)
+  args = ["-allowProvisioningUpdates"]
+
+  team = ENV["APPLE_TEAM_ID"].to_s
+  args << "DEVELOPMENT_TEAM=#{team}" if with_team && !team.empty?
+
+  key = write_auth_key
+  if key
+    args += [
+      "-authenticationKeyPath", key,
+      "-authenticationKeyID", ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+      "-authenticationKeyIssuerID", ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+    ]
+  end
+
+  args
+end
+
+# The archive needs the team so xcodebuild asks for the right profile; the
+# export step does not take build settings, only the authentication key.
 def signing_xcargs
-  team = ENV["APPLE_TEAM_ID"]
-  team && !team.empty? ? "-allowProvisioningUpdates DEVELOPMENT_TEAM=#{team}" : "-allowProvisioningUpdates"
+  signing_args.join(" ")
+end
+
+def export_signing_xcargs
+  signing_args(with_team: false).join(" ")
 end
 
 default_platform(:ios)
@@ -105,8 +141,9 @@ platform :ios do
       export_method: "app-store",
       output_directory: "ios/build",
       clean: true,
+      # Signing auth goes through xcargs; gym has no api_key option.
       xcargs: signing_xcargs,
-      api_key: api_key,
+      export_xcargs: export_signing_xcargs,
     )
 
     deliver(
@@ -136,8 +173,9 @@ platform :ios do
       export_method: "app-store",
       output_directory: "ios/build",
       clean: true,
+      # Signing auth goes through xcargs; gym has no api_key option.
       xcargs: signing_xcargs,
-      api_key: api_key,
+      export_xcargs: export_signing_xcargs,
     )
     deliver(
       api_key: api_key,
