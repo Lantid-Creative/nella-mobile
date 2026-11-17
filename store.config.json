@@ -1,6 +1,12 @@
 {
-  "siteUrl": "https://nella.example",
-  "supportEmail": "support@nella.example",
-  "copyright": "2026 Lantid Creative",
+  "siteUrl": "https://usenella.com",
+  "supportEmail": "support@usenella.com",
+  "paths": {
+    "support": "/support",
+    "privacy": "/privacy-policy",
+    "terms": "/terms-of-service",
+    "security": "/security"
+  },
+  "copyright": "2026 Harrena Africa Synergy LTD",
   "appVersion": "1.0.0"
 }

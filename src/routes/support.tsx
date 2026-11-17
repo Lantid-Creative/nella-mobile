@@ -9,7 +9,7 @@ export const Route = createFileRoute("/support")({
       {
         name: "description",
         content:
-          "Get help with the Nella preview build, and find out what the preview can and cannot do.",
+          "Get help with the Nella preview build, and see exactly what the preview can and cannot do.",
       },
     ],
   }),
@@ -18,20 +18,20 @@ export const Route = createFileRoute("/support")({
 
 function SupportPage() {
   return (
-    <LegalPage title="Support" updated="17 November 2026">
+    <LegalPage title="Help" updated="17 November 2026">
       <p>
-        Need a hand, found a bug, or want to tell us what feels wrong in the chat? Email{" "}
+        Found a bug, or something in the chat feels wrong? Email{" "}
         <span className="text-foreground">{SUPPORT_EMAIL}</span> and a person will read it. Telling
         us which phone you are on and what you tapped just before it went wrong helps most.
       </p>
 
       <section>
-        <h2>What this preview can do</h2>
+        <h2>What this build can do</h2>
         <ul>
           <li>Chat with Nella and prepare transfers, airtime and data purchases</li>
           <li>See a full payment breakdown before anything is submitted</li>
           <li>Send photos and voice notes inside the conversation</li>
-          <li>Switch between light, dark and your phone's setting</li>
+          <li>Switch between light, dark and your phone’s setting</li>
         </ul>
       </section>
 
@@ -50,22 +50,18 @@ function SupportPage() {
       </section>
 
       <section>
-        <h2>Your data</h2>
+        <h2>Forgotten demo PIN</h2>
         <p>
-          Everything you enter stays on your phone. If you want it gone, delete the app or clear its
-          data. The{" "}
-          <a href="/privacy" className="text-primary hover:underline">
-            privacy policy
-          </a>{" "}
-          explains this in full.
+          On the login screen, tap “Forgot demo PIN?”. The account only exists on your device, so
+          the reset happens instantly and locally — it is not a security control.
         </p>
       </section>
 
       <section>
-        <h2>Reset a forgotten demo PIN</h2>
+        <h2>Your data</h2>
         <p>
-          On the login screen, tap “Forgot demo PIN?”. Because the account only exists on your
-          device, the reset works instantly and locally — it is not a security control.
+          Everything you enter stays on your phone. To remove it, delete the app or clear its data.
+          In-app privacy notes explain this in full.
         </p>
       </section>
     </LegalPage>

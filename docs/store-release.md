@@ -11,43 +11,41 @@ has to happen before real money is handled is in [§7](#7-before-real-money).
 
 ---
 
-## 0. Fill in `store.config.json` first
+## 0. Where the listing points
 
-Both stores reject a listing whose support or privacy URL is dead, so the
-pipeline refuses to run while this file still holds the placeholder:
+`store.config.json` is filled in and committed. Every URL the stores open is
+derived from it, so the app, the listing and the marketing site cannot disagree:
 
 ```json
 {
-  "siteUrl": "https://nella.example",
-  "supportEmail": "support@nella.example",
-  "copyright": "2026 Lantid Creative",
+  "siteUrl": "https://usenella.com",
+  "supportEmail": "support@usenella.com",
+  "paths": {
+    "support": "/support",
+    "privacy": "/privacy-policy",
+    "terms": "/terms-of-service",
+    "security": "/security"
+  },
+  "copyright": "2026 Harrena Africa Synergy LTD",
   "appVersion": "1.0.0"
 }
 ```
 
-Set `siteUrl` to the public address of the **deployed web app** (publish it from
-Lovable, or host the `bun run build` output anywhere), and `supportEmail` to a
-mailbox you actually read. The app already serves the pages the listing points
-at:
+| Listing field | Resolves to                           |
+| ------------- | ------------------------------------- |
+| Support URL   | `https://usenella.com/support`        |
+| Privacy URL   | `https://usenella.com/privacy-policy` |
+| Marketing URL | `https://usenella.com`                |
+| Copyright     | `2026 Harrena Africa Synergy LTD`     |
 
-| Path       | Used as                                       |
-| ---------- | --------------------------------------------- |
-| `/support` | App Store support URL                         |
-| `/privacy` | Privacy policy URL (mandatory in both stores) |
-| `/terms`   | Terms, linked from the policy                 |
-| `/`        | Marketing URL                                 |
+Those four pages are live. The pipeline still refuses to run if any URL falls
+back to the `.example` placeholder, because a dead support or privacy link is an
+automatic rejection. Change a path only if the site moves it, then commit — do
+not edit the URL anywhere else.
 
-Then commit:
-
-```sh
-git add store.config.json && git commit -m "Point the store listing at the live site"
-git push
-```
-
-Everything downstream — the App Store URL fields, the copyright line, the
-marketing version — is read from this file. Never edit the URLs anywhere else.
-
----
+The app also ships its own `/privacy`, `/terms` and `/support` pages. They
+describe what _this build_ does on the phone and link out to the canonical
+documents above; they deliberately do not restate them.
 
 ## 1. What is already done
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/legal-page";
-import { SUPPORT_EMAIL } from "@/lib/store-links";
+import { SUPPORT_EMAIL, TERMS_URL } from "@/lib/store-links";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/terms")({
       {
         name: "description",
         content:
-          "Terms for the Nella preview build. Nothing in this version moves money, and the app is provided as-is while live banking is built.",
+          "Terms for the Nella preview build on iOS and Android. Nothing in this version moves money.",
       },
     ],
   }),
@@ -18,17 +18,25 @@ export const Route = createFileRoute("/terms")({
 
 function TermsPage() {
   return (
-    <LegalPage title="Terms of use" updated="17 November 2026">
-      <p>
-        These terms cover the current Nella preview. By using the app you accept them. They are
-        short because the preview deliberately does very little.
-      </p>
-
+    <LegalPage
+      title="Terms for the app"
+      updated="17 November 2026"
+      intro={
+        <>
+          These terms cover the app on your phone. Nella’s full terms of service live at{" "}
+          <a href={TERMS_URL} className="text-primary hover:underline">
+            {new URL(TERMS_URL).hostname}
+            {new URL(TERMS_URL).pathname}
+          </a>
+          .
+        </>
+      }
+    >
       <section>
         <h2>This is a preview</h2>
         <p>
-          Nella is not yet a bank, a payment service or a money transfer operator. The app cannot
-          move money, cannot receive money and cannot open an account. Anything you prepare is a
+          Nella is not a bank, a payment service or a money transfer operator in this release. The
+          app cannot move money, receive money or open an account. Anything you prepare is a
           demonstration that stops before submission.
         </p>
       </section>
@@ -38,7 +46,7 @@ function TermsPage() {
         <p>
           The account, chats and payment previews you create live on your device and nowhere else.
           Deleting the app deletes them. Do not enter real banking credentials, card numbers or
-          identity documents into this preview — we do not ask for them and cannot protect them.
+          identity documents — we do not ask for them and cannot protect them.
         </p>
       </section>
 
@@ -55,23 +63,25 @@ function TermsPage() {
         <p>
           The preview is provided as-is, without warranties of any kind. Because it cannot move
           money, it also cannot lose any — but it may still contain bugs, and features may change or
-          vanish between releases.
+          disappear between releases.
         </p>
       </section>
 
       <section>
         <h2>Limitation of liability</h2>
         <p>
-          To the extent the law allows, we are not liable for any loss arising from your use of the
-          preview, including loss of the demo data stored on your device.
+          To the extent the law allows, and without limiting any right you have under the full terms
+          of service, we are not liable for any loss arising from your use of the preview, including
+          loss of the demo data stored on your device.
         </p>
       </section>
 
       <section>
-        <h2>Changes</h2>
+        <h2>When live banking arrives</h2>
         <p>
-          Live banking will arrive with its own terms, which you will be asked to accept before any
-          real account is opened. Those terms will replace these.
+          Connecting real accounts will come with its own terms and eligibility checks, which you
+          will be asked to accept before any real account is opened. Those will build on the full
+          terms of service, not replace them.
         </p>
       </section>
 
