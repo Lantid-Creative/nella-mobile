@@ -67,6 +67,11 @@ The build machine here has no Xcode, no Java and no Android SDK, so **the native
 builds run on GitHub Actions**. That is not a workaround — it is also how the
 release should be made, because it keeps one signing identity in one place.
 
+The repository is **public**, which is what makes this practical: public repos get
+unlimited Actions minutes, while a private repo on the free plan includes roughly
+200 macOS minutes a month and puts macOS jobs at the back of the queue. Everything
+sensitive lives in Actions secrets, never in the tree — see [§3](#3-put-the-credentials-in-github).
+
 ---
 
 ## 2. The two one-time browser steps
