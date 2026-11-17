@@ -81,18 +81,30 @@ have to be done once, by you, in a browser. Nothing else needs a browser.
 
 ### App Store Connect
 
-1. <https://developer.apple.com/programs/> — enrol ($99/year) if you have not.
-2. <https://appstoreconnect.apple.com> → **My Apps → + → New App**
+The account is connected: the API key is in `APP_STORE_CONNECT_KEY_ID`,
+`APP_STORE_CONNECT_ISSUER_ID` and `APP_STORE_CONNECT_KEY_CONTENT`, and
+`APPLE_TEAM_ID` is the repository variable `B9SBM56TX4`.
+
+| Thing        | State                                                   |
+| ------------ | ------------------------------------------------------- |
+| Team ID      | `B9SBM56TX4`                                            |
+| API key      | `4STQXVTD84`, App Manager — already in GitHub secrets   |
+| Bundle ID    | `creative.lantid.nella` — registered, seed `B9SBM56TX4` |
+| App record   | **does not exist yet** — this is the one step left      |
+| Name `Nella` | free on the App Store (checked US, NG, GB storefronts)  |
+
+**The remaining step, and the only one:**
+
+1. <https://appstoreconnect.apple.com> → **My Apps → + → New App**
    - Platform **iOS**, name **Nella**, primary language **English (U.S.)**
-   - Bundle ID **`creative.lantid.nella`** — if it is not in the list, register
-     it first at <https://developer.apple.com/account/resources/identifiers>
-   - SKU: anything stable, e.g. `nella-ios`
-3. **Agreements, Tax, and Banking** → accept the _Paid Applications_ agreement
-   if you plan to charge later. A free app still needs the free agreement
-   accepted, or the build cannot be submitted.
-4. **Users and Access → Integrations → Team Keys → +** — App Manager role.
-   Copy the key ID and issuer ID, and download the `.p8` (only downloadable
-   once).
+   - Bundle ID **`creative.lantid.nella`** (it is already registered, so it
+     appears in the list — do not create a new one)
+   - SKU: `nella-ios`
+2. **Agreements, Tax, and Banking** → make sure the free-app agreement is
+   **Active**. The build cannot be attached to a version otherwise.
+
+Apple has no API for creating an app, which is why this cannot be scripted. Every
+other field on the version page is in [§2b](#2b-every-field-only-the-console-can-fill).
 
 ### Google Play Console
 
