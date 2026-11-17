@@ -35,6 +35,11 @@ android {
                 keyPassword keystoreProperties["keyPassword"]
                 storeFile file(keystoreProperties["storeFile"])
                 storePassword keystoreProperties["storePassword"]
+                // A JKS and a PKCS12 store both work; declare it so Gradle does
+                // not have to guess from the file extension.
+                if (keystoreProperties["storeType"]) {
+                    storeType keystoreProperties["storeType"]
+                }
             }
         }
     }

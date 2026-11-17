@@ -8,10 +8,11 @@ name: Store release
 # availability). After that this workflow does the rest.
 #
 # Run it from the terminal:
-#   gh workflow run store.yml -f platform=both -f mode=release
-#   gh workflow run store.yml -f platform=ios  -f mode=listing
+#   gh workflow run store.yml -f platform=both -f mode=build    # compile only
+#   gh workflow run store.yml -f platform=both -f mode=listing  # text + images
+#   gh workflow run store.yml -f platform=both -f mode=release  # build + submit
 #
-# See docs/store-submission.md.
+# See docs/store-release.md.
 
 on:
   workflow_dispatch:
@@ -22,9 +23,9 @@ on:
         options: [both, ios, android]
         default: both
       mode:
-        description: "listing pushes text and screenshots only; release also builds and submits"
+        description: "build compiles only; listing pushes text and screenshots; release also uploads and submits"
         type: choice
-        options: [release, listing]
+        options: [release, listing, build]
         default: release
   push:
     tags:
@@ -75,6 +76,20 @@ jobs:
       - name: Sync the native project
         run: bunx cap sync ios
 
+      # Proves the Swift and the WebView bundle compile without needing an Apple
+      # account. This is the step to run before the account is ready.
+      - name: Compile only
+        if: inputs.mode == 'build'
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
       - name: Upload the listing only
         if: inputs.mode == 'listing'
         run: bundle exec fastlane ios listing
@@ -85,7 +100,7 @@ jobs:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
 
       - name: Build, upload and submit
-        if: inputs.mode != 'listing'
+        if: inputs.mode == 'release' || github.event_name == 'push'
         run: bundle exec fastlane ios release
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -95,7 +110,7 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
 
       - name: Keep the IPA
-        if: inputs.mode != 'listing'
+        if: inputs.mode == 'release' || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: Nella-ios-ipa
@@ -139,6 +154,7 @@ jobs:
         run: bunx cap sync android
 
       - name: Write the Play service account
+        if: inputs.mode == 'release' || inputs.mode == 'listing'
         run: |
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play-service-account.json"
         env:
@@ -147,9 +163,10 @@ jobs:
       - name: Write the upload key
         if: inputs.mode != 'listing'
         run: |
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/android/app/nella-upload.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/android/app/nella-upload.p12"
           cat > "$GITHUB_WORKSPACE/android/keystore.properties" <<PROPERTIES
-          storeFile=nella-upload.jks
+          storeFile=nella-upload.p12
+          storeType=PKCS12
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
@@ -174,7 +191,7 @@ jobs:
           PLAY_RELEASE_STATUS: draft
 
       - name: Upload the bundle and listing
-        if: inputs.mode != 'listing'
+        if: inputs.mode == 'release' || github.event_name == 'push'
         run: bundle exec fastlane android release
         env:
           PLAY_SERVICE_ACCOUNT_JSON_PATH: ${{ runner.temp }}/play-service-account.json
