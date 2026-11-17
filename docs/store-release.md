@@ -117,6 +117,65 @@ have to be done once, by you, in a browser. Nothing else needs a browser.
 
 ---
 
+## 2b. Every field only the console can fill
+
+The APIs cannot complete these, and a submission stays stuck until each one is
+answered. Every answer below is correct for **this** build — copy them as-is.
+
+### App Store Connect — the version page
+
+| Field          | Answer                                                                       |
+| -------------- | ---------------------------------------------------------------------------- |
+| Category       | Finance (secondary: Utilities)                                               |
+| Age rating     | 4+ — no objectionable content, no user-generated content, no gambling        |
+| Price          | Free, all territories                                                        |
+| App Privacy    | **No data collected** (see the note below)                                   |
+| Content rights | Does not contain third-party content                                         |
+| Encryption     | Already declared in the build; nothing to answer here                        |
+| Review notes   | Use the text in [§5](#app-review-notes-paste-this-into-the-review-notes-box) |
+| Demo account   | Not needed — "Get started" has no sign-in                                    |
+
+**App Privacy** is the one that gets submissions rejected when it is skipped.
+Answer: _no, we do not collect data from this app_. The preview stores the name,
+phone and PIN only in local app storage, sends nothing off the device, and has no
+analytics or advertising SDK. That matches `ios/App/App/PrivacyInfo.xcprivacy`.
+
+### Google Play Console — App content
+
+Everything under **Policy → App content** has to be green before Production:
+
+| Declaration                 | Answer                                                                                                         |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Privacy policy              | `https://usenella.com/privacy-policy`                                                                          |
+| App access                  | All functionality is available without special access                                                          |
+| Ads                         | No ads                                                                                                         |
+| Content rating              | Fill the questionnaire: no violence, sex, language, drugs, gambling, or user interaction → expect **Everyone** |
+| Target audience             | 18 and over                                                                                                    |
+| News app                    | No                                                                                                             |
+| Data safety                 | **No data collected, no data shared**; no tracking; nothing transmitted off the device                         |
+| Government app              | No                                                                                                             |
+| Financial features          | Not a banking app in this build — it links to no financial institution and cannot transact                     |
+| Health                      | No                                                                                                             |
+| Photo and video permissions | Camera is used only for bill capture started by the user; nothing is uploaded                                  |
+| Microphone permissions      | Used only while the user holds to record a voice note                                                          |
+
+Both stores will compare these answers against the app. If the app starts
+sending anything off the device, these tables and the privacy policy have to
+change in the same release — see [§7](#7-before-real-money).
+
+### Apple, once per account
+
+- **Agreements, Tax, and Banking** — the free-app agreement must be _Active_,
+  or the build cannot be attached to a version.
+- **App Store Server Notifications / paid apps** — not needed; there is no
+  purchase in this build.
+
+### Google, once per account
+
+- A **personal** developer account created after November 2023 must run a
+  closed test with **12 testers for 14 continuous days** before it can publish
+  to Production. Start the internal track now so the clock runs.
+
 ## 3. Put the credentials in GitHub
 
 Run these from the repository root. `gh` must be authenticated
