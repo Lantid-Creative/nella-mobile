@@ -1,0 +1,4 @@
+# Identifiers shared by every lane. The bundle id must never change after the
+# first submission — App Store Connect treats a new id as a new app.
+app_identifier("creative.lantid.nella")
+apple_team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]

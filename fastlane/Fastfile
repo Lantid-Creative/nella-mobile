@@ -1,0 +1,177 @@
+require "json"
+
+# Release lanes for both stores.
+#
+# Everything here is driven from store.config.json plus repository secrets, so a
+# release is one command and the listing cannot drift from the app. The lanes
+# only upload — they never decide business rules, prices or availability.
+#
+#   bundle exec fastlane ios listing      # App Store text + screenshots
+#   bundle exec fastlane ios release      # build, upload, submit for review
+#   bundle exec fastlane android listing  # Play text + graphics
+#   bundle exec fastlane android release  # bundle + listing to a Play track
+#
+# CI calls these from .github/workflows/store.yml.
+
+CONFIG = JSON.parse(File.read(File.expand_path("../store.config.json", __dir__)))
+
+APP_ID = "creative.lantid.nella"
+
+# The site is the listing's support and marketing destination, so it has to be a
+# real address before anything is uploaded. A dead link is an automatic rejection.
+def site_url
+  url = CONFIG.fetch("siteUrl").sub(%r{/+\z}, "")
+  if url.include?(".example")
+    UI.user_error!(
+      "store.config.json still holds the placeholder siteUrl (#{url}). " \
+      "Set it to the public address of the deployed web app, set supportEmail " \
+      "to a mailbox you actually read, then commit before releasing.",
+    )
+  end
+  url
+end
+
+def placeholder_email?
+  CONFIG.fetch("supportEmail").include?(".example")
+end
+
+# App Store Connect API key. The .p8 never goes in the repository.
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+    key_content: ENV.fetch("APP_STORE_CONNECT_KEY_CONTENT"),
+    in_house: false,
+  )
+end
+
+# Every listing field that is not a text file lives here, so the App Store and
+# the app agree on where Nella lives.
+def listing_urls
+  {
+    support_url: "#{site_url}/support",
+    marketing_url: site_url,
+    privacy_url: "#{site_url}/privacy",
+    copyright: CONFIG.fetch("copyright"),
+  }
+end
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload the App Store listing (text + screenshots) without a binary"
+  lane :listing do
+    deliver(
+      api_key: asc_api_key,
+      app_version: CONFIG.fetch("appVersion"),
+      skip_binary_upload: true,
+      skip_app_version_update: false,
+      submit_for_review: false,
+      **listing_urls,
+    )
+  end
+
+  desc "Build a signed app, upload it with the listing, and submit for review"
+  lane :release do
+    api_key = asc_api_key
+
+    # CI supplies a monotonic build number; the marketing version stays in
+    # store.config.json so both stores ship the same release number.
+    if ENV["BUILD_NUMBER"]
+      increment_build_number(
+        xcodeproj: "ios/App/App.xcodeproj",
+        build_number: ENV.fetch("BUILD_NUMBER"),
+      )
+    end
+
+    gym(
+      workspace: "ios/App/App.xcworkspace",
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "ios/build",
+      clean: true,
+      xcargs: "-allowProvisioningUpdates",
+      api_key: api_key,
+    )
+
+    deliver(
+      api_key: api_key,
+      ipa: lane_context[SharedValues::IPA_OUTPUT_PATH],
+      app_version: CONFIG.fetch("appVersion"),
+      submit_for_review: true,
+      automatic_release: false,
+      **listing_urls,
+    )
+  end
+
+  desc "Upload only the binary, leaving the listing alone"
+  lane :binary do
+    api_key = asc_api_key
+    if ENV["BUILD_NUMBER"]
+      increment_build_number(
+        xcodeproj: "ios/App/App.xcodeproj",
+        build_number: ENV.fetch("BUILD_NUMBER"),
+      )
+    end
+    gym(
+      workspace: "ios/App/App.xcworkspace",
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "ios/build",
+      clean: true,
+      xcargs: "-allowProvisioningUpdates",
+      api_key: api_key,
+    )
+    deliver(
+      api_key: api_key,
+      ipa: lane_context[SharedValues::IPA_OUTPUT_PATH],
+      app_version: CONFIG.fetch("appVersion"),
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+    )
+  end
+end
+
+platform :android do
+  def supply_options
+    key_path = ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON_PATH")
+    {
+      package_name: APP_ID,
+      json_key: key_path,
+      metadata_path: "fastlane/metadata/android",
+      track: ENV.fetch("PLAY_TRACK", "internal"),
+      # `draft` uploads without going live: the first release still needs the
+      # Play Console declarations (content rating, data safety) that the API
+      # cannot fill in.
+      release_status: ENV.fetch("PLAY_RELEASE_STATUS", "draft"),
+    }
+  end
+
+  desc "Upload the Play listing (text + graphics) without a bundle"
+  lane :listing do
+    supply(
+      **supply_options,
+      skip_upload_aab: true,
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false,
+    )
+  end
+
+  desc "Upload the signed bundle and the listing to a Play track"
+  lane :release do
+    aab = "android/app/build/outputs/bundle/release/app-release.aab"
+    UI.user_error!("Missing #{aab} — build it before running this lane.") unless File.exist?(aab)
+
+    supply(
+      **supply_options,
+      aab: aab,
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false,
+    )
+  end
+end

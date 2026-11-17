@@ -10,7 +10,7 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // store build is a prerendered SPA: every route becomes a static index.html that the
 // native WebView can open directly. The default build stays server-rendered for
 // Cloudflare Workers hosting.
-const appBuild = process.env.NELLA_APP_BUILD === "true";
+const appBuild = process.env["NELLA_APP_BUILD"] === "true";
 
 export default defineConfig({
   tanstackStart: {
@@ -22,7 +22,16 @@ export default defineConfig({
           // The native WebView has no server, so every route the app can land on
           // is prerendered to its own index.html. Client-side navigation between
           // them stays in the SPA, and a cold start on /auth or /chat still loads.
-          pages: [{ path: "/" }, { path: "/auth" }, { path: "/chat" }],
+          pages: [
+            { path: "/" },
+            { path: "/auth" },
+            { path: "/chat" },
+            // The stores open the policy from the listing; it has to resolve in
+            // the native shell too, not just on the web host.
+            { path: "/privacy" },
+            { path: "/terms" },
+            { path: "/support" },
+          ],
           prerender: {
             enabled: true,
             autoStaticPathsDiscovery: true,

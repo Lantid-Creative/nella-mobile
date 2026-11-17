@@ -1,245 +1,300 @@
-# Store release checklist
+# Store submission
 
-Everything needed to take Nella from this repository to a live listing on the
-**App Store** and **Google Play**.
+Everything needed to get Nella onto the **App Store** and **Google Play**, and
+what is already automated so the release is a terminal command rather than a
+click-through.
 
-The app today is a **demo**: the account, the chat history and the payment
-previews live on the device and no money moves. That is deliberate — the
-release gets the app in front of real people first, and the live banking
-services are connected afterwards. The sections marked **Live release** below
-are the work that has to happen before the app can handle real money.
-
----
-
-## 1. Identifiers (already fixed — do not change)
-
-|                                   |                         |
-| --------------------------------- | ----------------------- |
-| Bundle ID / Application ID        | `creative.lantid.nella` |
-| App name                          | Nella                   |
-| Version                           | `1.0.0` (build `1`)     |
-| iOS deployment target             | 15.0                    |
-| Android min / target SDK          | 24 / 36                 |
-| Android versionCode / versionName | 1 / 1.0.0               |
-
-`creative.lantid.nella` must already be registered as an App ID on the Apple
-Developer portal and as an application in the Play Console. If it is not, the
-first submission is blocked until it is.
+The app today is a **preview**: the account, the chat and the payment breakdowns
+live on the device, no bank is connected and no money moves. That is deliberate
+and it is stated in the app, the listing and the privacy policy. The work that
+has to happen before real money is handled is in [§7](#7-before-real-money).
 
 ---
 
-## 2. Accounts
+## 0. Fill in `store.config.json` first
 
-- [ ] **Apple Developer Program** ($99/year) — individual or organisation.
-- [ ] **App Store Connect** record for `creative.lantid.nella`.
-- [ ] **Google Play Console** developer account ($25 one-off) and an app record
-      for `creative.lantid.nella`.
-- [ ] A **privacy policy** and a **support URL** that are publicly reachable.
-      Both stores reject a listing without them. They must describe Nella, not
-      the demo.
+Both stores reject a listing whose support or privacy URL is dead, so the
+pipeline refuses to run while this file still holds the placeholder:
 
----
-
-## 3. CI secrets
-
-Add these in **GitHub → Settings → Secrets and variables → Actions**.
-
-### iOS
-
-| Secret                           | What it is                                                     |
-| -------------------------------- | -------------------------------------------------------------- |
-| `APP_STORE_CONNECT_KEY_ID`       | The key id (e.g. `ABC123DEFG`) of an App Store Connect API key |
-| `APP_STORE_CONNECT_ISSUER_ID`    | The issuer id (a UUID) shown with the key                      |
-| `APP_STORE_CONNECT_KEY_CONTENT`  | The `.p8` key file, base64 encoded (`base64 -i AuthKey.p8`)    |
-| `APP_STORE_CONNECT_KEY_PASSWORD` | The password you chose when creating the key                   |
-
-Also add a repository **variable** `APPLE_TEAM_ID` with the 10-character Apple
-Team ID.
-
-The API key is created in **App Store Connect → Users and Access → Integrations
-→ Team Keys**. It needs the _App Manager_ role or higher.
-
-### Android
-
-| Secret                      | What it is                                                    |
-| --------------------------- | ------------------------------------------------------------- |
-| `ANDROID_KEYSTORE_BASE64`   | The upload key, base64 encoded (`base64 -i nella-upload.jks`) |
-| `ANDROID_KEYSTORE_PASSWORD` | Its password                                                  |
-| `ANDROID_KEY_ALIAS`         | The key alias, e.g. `nella`                                   |
-| `ANDROID_KEY_PASSWORD`      | The key password                                              |
-| `PLAY_SERVICE_ACCOUNT_JSON` | The Play Console service account key, base64 encoded          |
-
-The upload key is created once and kept forever — losing it means you cannot
-update the listing:
-
-```sh
-keytool -genkeypair -v -keystore nella-upload.jks \
-  -alias nella -keyalg RSA -keysize 2048 -validity 10000
+```json
+{
+  "siteUrl": "https://nella.example",
+  "supportEmail": "support@nella.example",
+  "copyright": "2026 Lantid Creative",
+  "appVersion": "1.0.0"
+}
 ```
 
+Set `siteUrl` to the public address of the **deployed web app** (publish it from
+Lovable, or host the `bun run build` output anywhere), and `supportEmail` to a
+mailbox you actually read. The app already serves the pages the listing points
+at:
+
+| Path       | Used as                                       |
+| ---------- | --------------------------------------------- |
+| `/support` | App Store support URL                         |
+| `/privacy` | Privacy policy URL (mandatory in both stores) |
+| `/terms`   | Terms, linked from the policy                 |
+| `/`        | Marketing URL                                 |
+
+Then commit:
+
+```sh
+git add store.config.json && git commit -m "Point the store listing at the live site"
+git push
+```
+
+Everything downstream — the App Store URL fields, the copyright line, the
+marketing version — is read from this file. Never edit the URLs anywhere else.
+
 ---
 
-## 4. Build and upload
+## 1. What is already done
 
-### iOS
+|                            |                                                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Bundle ID / Application ID | `creative.lantid.nella` (never change it after the first submission)                                              |
+| Version                    | `1.0.0`; iOS build number comes from the CI run number, Android `versionCode` is overridable with `-PversionCode` |
+| Platforms                  | iPhone only (`TARGETED_DEVICE_FAMILY = 1`), iOS 15+, Android 7.0+ (minSdk 24), target SDK 36                      |
+| Icons and splash           | generated from the Nella mascot — `bun run assets:brand`                                                          |
+| Screenshots                | 6.9" + 6.5" iPhone and 1080×1920 Android, captured from the running app — `bun run screenshots`                   |
+| Play graphics              | 1024×500 feature graphic and 512×512 icon — also `bun run screenshots`                                            |
+| Listing text               | in `fastlane/metadata/`, within every store character limit                                                       |
+| Privacy manifest           | `ios/App/App/PrivacyInfo.xcprivacy` — no tracking, no collected data                                              |
+| Export compliance          | `ITSAppUsesNonExemptEncryption = false` in `Info.plist`                                                           |
+| Camera / microphone        | usage strings on iOS, permissions on Android                                                                      |
+| Upload uploads             | `fastlane/Fastfile` lanes for both stores, called by `.github/workflows/store.yml`                                |
+
+The build machine here has no Xcode, no Java and no Android SDK, so **the native
+builds run on GitHub Actions**. That is not a workaround — it is also how the
+release should be made, because it keeps one signing identity in one place.
+
+---
+
+## 2. The two one-time browser steps
+
+The store APIs cannot create an app record or accept a legal agreement. These
+have to be done once, by you, in a browser. Nothing else needs a browser.
+
+### App Store Connect
+
+1. <https://developer.apple.com/programs/> — enrol ($99/year) if you have not.
+2. <https://appstoreconnect.apple.com> → **My Apps → + → New App**
+   - Platform **iOS**, name **Nella**, primary language **English (U.S.)**
+   - Bundle ID **`creative.lantid.nella`** — if it is not in the list, register
+     it first at <https://developer.apple.com/account/resources/identifiers>
+   - SKU: anything stable, e.g. `nella-ios`
+3. **Agreements, Tax, and Banking** → accept the _Paid Applications_ agreement
+   if you plan to charge later. A free app still needs the free agreement
+   accepted, or the build cannot be submitted.
+4. **Users and Access → Integrations → Team Keys → +** — App Manager role.
+   Copy the key ID and issuer ID, and download the `.p8` (only downloadable
+   once).
+
+### Google Play Console
+
+1. <https://play.google.com/console> — register ($25 one-off) if you have not.
+2. **Create app** → name **Nella**, default language **English (United States)**,
+   App, Free. Package name **`creative.lantid.nella`** cannot be changed later.
+3. **Setup → API access** → link a Google Cloud project → create a service
+   account with the **Release manager** role, then create and download a JSON
+   key. Grant that service account access to the Nella app in
+   **Users and permissions**.
+4. Create the upload key. Keep it and its passwords somewhere safe — losing it
+   means you cannot update the app:
+
+   ```sh
+   keytool -genkeypair -v -keystore ~/.android-keys/nella-upload.jks \
+     -alias nella -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+---
+
+## 3. Put the credentials in GitHub
+
+Run these from the repository root. `gh` must be authenticated
+(`gh auth status`).
 
 ```sh
-# Locally
-bun install
-bun run build:app
-bunx cap sync ios
-bun run cap:open:ios      # then Product → Archive in Xcode
+# ---- Apple ----------------------------------------------------------------
+gh secret set APP_STORE_CONNECT_KEY_ID      --body "ABC123DEFG"
+gh secret set APP_STORE_CONNECT_ISSUER_ID   --body "00000000-0000-0000-0000-000000000000"
+gh secret set APP_STORE_CONNECT_KEY_CONTENT --body "$(cat ~/Downloads/AuthKey_ABC123DEFG.p8)"
+
+# The 10-character team id from App Store Connect → Membership.
+gh variable set APPLE_TEAM_ID --body "ABCDE12345"
+
+# ---- Google ---------------------------------------------------------------
+gh secret set ANDROID_KEYSTORE_BASE64    --body "$(base64 -i ~/.android-keys/nella-upload.jks)"
+gh secret set ANDROID_KEYSTORE_PASSWORD  --body "the-keystore-password"
+gh secret set ANDROID_KEY_ALIAS          --body "nella"
+gh secret set ANDROID_KEY_PASSWORD       --body "the-key-password"
+gh secret set PLAY_SERVICE_ACCOUNT_JSON  --body "$(cat ~/Downloads/play-service-account.json)"
 ```
 
-In CI, push a tag and the workflow does the rest:
+Check what landed:
 
 ```sh
-git tag ios-v1.0.0 && git push origin ios-v1.0.0
+gh secret list
+gh variable list
 ```
 
-The workflow archives with Xcode, exports an IPA and uploads it to TestFlight
-with `xcrun altool`. The IPA is also saved as a workflow artifact, so it can
-always be uploaded by hand through Transporter if `altool` misbehaves on a
-future Xcode.
+> `base64 -i` is the macOS form. On Linux use `base64 -w0`.
 
-### Android
+---
+
+## 4. Release from the terminal
 
 ```sh
+# Both stores: build, upload, and submit for review.
+gh workflow run store.yml -f platform=both -f mode=release
+
+# One store at a time.
+gh workflow run store.yml -f platform=ios     -f mode=release
+gh workflow run store.yml -f platform=android -f mode=release
+
+# Push only the listing text and screenshots — no build, no new version.
+gh workflow run store.yml -f platform=both -f mode=listing
+
+# Watch it.
+gh run watch
+```
+
+`mode=release` does, per store:
+
+- **iPhone** — archives with the App Store distribution profile, uploads the
+  build, pushes the listing and screenshots, and submits the version for review.
+  The IPA is kept as a workflow artifact.
+- **Android** — builds a signed `.aab`, uploads it to the **internal** track as a
+  **draft** with the listing and graphics. The AAB is kept as an artifact.
+
+Tagging works too, if you prefer a release to be a version:
+
+```sh
+git tag ios-v1.0.0     && git push origin ios-v1.0.0
 git tag android-v1.0.0 && git push origin android-v1.0.0
 ```
 
-The workflow builds a signed `.aab` and uploads it with the
-`r0adkll/upload-google-play` action. The `.aab` is also saved as an artifact.
+### Why Android stops at "draft"
 
-> Google Play requires a **bundle** (`.aab`), never an `.apk`, for new apps.
+Play will not let a release go live until the console has a **content rating**
+and a **data safety** declaration, and neither can be filled through the API.
+Fill them once in the console:
+
+- **Content rating** → answer the questionnaire. The preview has no user
+  content, no ads, no purchases → expect _Everyone_.
+- **Data safety** → **No data collected**, **no data shared**, no tracking. This
+  matches the iOS privacy manifest.
+- **App access** → _All functionality is available without special access_.
+- **Ads** → No.
+- **Government apps / Health apps** → No.
+
+After that, promote the draft to **Production** in the console (or set
+`PLAY_RELEASE_STATUS=completed` on a later run once the app is already public).
+
+> A new **personal** Play developer account also has to run a closed test with at
+> least 12 testers for 14 continuous days before Production. Start the internal
+> track now so that clock runs while you finish the listing.
 
 ---
 
-## 5. App Store listing
+## 5. Listing content
 
-- **Name** — `Nella` (30 characters max).
-- **Subtitle** — `Your money, in a chat` (30 characters max).
-- **Promotional text** — up to 170 characters, editable without a new build.
-- **Description** — up to 4000 characters.
-- **Keywords** — up to 100 characters, comma separated, no spaces after commas.
-- **Primary category** — Finance. **Secondary** — Lifestyle.
-- **Support URL** and **Marketing URL**.
-- **Privacy Policy URL** — mandatory.
-- **Age rating** — the demo collects nothing, so 4+ is right. Re-answer if the
-  live release changes this.
+The text is in the repository, so you can paste it straight into the console if
+you ever need to upload by hand:
+
+| Field                     | File                                                                        |
+| ------------------------- | --------------------------------------------------------------------------- |
+| App name                  | `fastlane/metadata/ios/en-US/name.txt`                                      |
+| Subtitle                  | `fastlane/metadata/ios/en-US/subtitle.txt`                                  |
+| Description               | `fastlane/metadata/ios/en-US/description.txt`                               |
+| Keywords                  | `fastlane/metadata/ios/en-US/keywords.txt`                                  |
+| Promotional text          | `fastlane/metadata/ios/en-US/promotional_text.txt`                          |
+| What's new                | `fastlane/metadata/ios/en-US/release_notes.txt`                             |
+| Play title / short / full | `fastlane/metadata/android/en-US/*.txt`                                     |
+| Screenshots               | `fastlane/screenshots/en-US/` and `fastlane/metadata/android/en-US/images/` |
+
+Only two things are console-only:
+
+- **Category** — App Store: Finance (secondary Lifestyle). Play: Finance.
+- **Pricing** — free, all territories.
+
+If you change the copy, edit the files and re-run `mode=listing`; do not retype
+it in the console, or the two drift apart.
+
+### App Review notes (paste this into the review notes box)
+
+> Nella is a chat-first money companion. This build is a preview: it is a native
+> WebView shell around an offline-first web app, with native camera capture,
+> microphone recording, haptics, the Android hardware back button and WebAuthn
+> device unlock. No bank account is connected, no payment can be completed and no
+> data leaves the device. Tap "Get started" — there is no account to create and
+> no credentials are needed.
 
 ### Screenshots
 
-Required device sizes (App Store Connect auto-crops from one upload per size):
+`bun run screenshots` regenerates all of them from the running app:
 
-- 6.7" iPhone (1290 × 2796) — at least 2
-- 6.5" iPhone (1242 × 2688) — at least 2
+- 6.9" iPhone — 1320×2868
+- 6.5" iPhone — 1242×2688
+- Android phone — 1080×1920
+- Play feature graphic 1024×500, icon 512×512
 
-A good set: the splash, the chat, a payment being prepared, the review card,
-the activity list and the profile sheet. Capture them from the simulator or a
-real phone with `xcrun simctl io booted screenshot`.
-
-### Icon
-
-`assets/icon-only.png` is the 1024 × 1024 master (no alpha — the App Store
-rejects transparency). It is already installed into
-`ios/App/App/Assets.xcassets/AppIcon.appiconset`.
-
-### Privacy
-
-- `ios/App/App/PrivacyInfo.xcprivacy` declares: no tracking, no collected data,
-  no required-reason APIs. It is already in the Xcode target.
-- The App Store **privacy label** must agree with it. With the demo collecting
-  nothing, answer "Data Not Collected".
-
-### Review notes (4.2 — minimum functionality)
-
-The app is a native shell around a web app, so tell the reviewer what the
-native layer actually does:
-
-> Nella is a mobile money companion. The app is a native WebView shell around
-> an offline-first web application, with native camera capture (snap-to-pay),
-> native microphone recording (voice notes), native haptics, the Android
-> hardware back button and WebAuthn biometric unlock. There is no account
-> creation and no payment can be completed: this release is a preview build
-> and every transaction is a local preview. No data leaves the device.
+It drives the real UI: the welcome screen, the chat, a transfer being prepared,
+and the review card. If the UI changes, re-run it — never ship screenshots of a
+build that no longer exists.
 
 ---
 
-## 6. Google Play listing
+## 6. If a run fails
 
-- **App name** — `Nella` (30 characters).
-- **Short description** — up to 80 characters.
-- **Full description** — up to 4000 characters.
-- **Application category** — Finance.
-- **Contact email**, **Website**, **Privacy policy URL**.
-- **Content rating** questionnaire.
-- **Target audience and content** — include 18+ only if the live release adds
-  financial products that need it.
-- **Data safety** — answer "No data collected" for the demo build. This must
-  match the privacy manifest.
-- **App access** — if any part of the app is restricted, explain how to reach
-  it; the demo is not, so answer "All functionality is available without
-  special access".
-- **Ads** — declare "No ads".
-- **Government apps** and **Health apps** — declare "No" for both.
-
-### Graphics
-
-| Asset             | Size                                                   |
-| ----------------- | ------------------------------------------------------ |
-| App icon          | 512 × 512 PNG (no alpha)                               |
-| Feature graphic   | 1024 × 500 PNG/JPG                                     |
-| Phone screenshots | at least 2, 320–3840 px on the long edge, 16:9 or 9:16 |
-
-### Release tracks
-
-Ship to **Internal testing** first, then **Closed testing**, then **Production**.
-Google requires a **closed test with at least 12 testers for 14 continuous
-days** before a production release for a new personal developer account. Plan
-for that window.
+| Symptom                                                   | Cause                                                                                                      |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `store.config.json still holds the placeholder siteUrl`   | Fill in §0.                                                                                                |
+| iOS: `No profiles for 'creative.lantid.nella' were found` | `APPLE_TEAM_ID` is wrong or the App ID is not registered.                                                  |
+| iOS: authentication error                                 | The `.p8` in `APP_STORE_CONNECT_KEY_CONTENT` must be the raw file contents, and the key needs App Manager. |
+| Android: `Version code 1 has already been used`           | Bump: `./gradlew bundleRelease -PversionCode=2`.                                                           |
+| Android: `Package not found`                              | The app record does not exist yet, or the service account was not granted access to it.                    |
+| Play rejects the listing                                  | The content rating or data safety declaration is still empty.                                              |
 
 ---
 
-## 7. Live release — before the app handles real money
+## 7. Before real money
 
-The demo is honest about what it is, and that honesty has to survive the
-connection to the live services.
+The preview is honest about what it is, and that honesty has to survive the
+connection to live services.
 
 - [ ] **A real customer session API.** The old `/api/mobile/*` routes were
-      retired on 10 Nov 2026 because they took the phone and PIN in the query
-      string and used a session token that never expired. The replacement must
-      use a real session (short-lived, revocable) over the `Authorization`
-      header. Do not resurrect the old scheme.
+      retired on 10 Nov 2026: they took the phone and PIN in the query string on
+      a session token that never expired. The replacement needs a short-lived,
+      revocable session carried in the `Authorization` header. Do not resurrect
+      the old scheme.
 - [ ] **Server-owned financial rules.** Quote expiry, fees, limits and
-      eligibility must be decided on the server. The app may preview and
-      request, never authorise.
-- [ ] **Idempotency.** A transfer is submitted once, with an idempotency key,
-      and the outcome distinguishes processing / held / unknown / failed /
-      sent / reversed. `unknown` must never invite a blind retry.
-- [ ] **Private approval.** The PIN is entered in a private form and verified
-      by the server, never in chat and never compared in the browser.
-- [ ] **Durable events.** Balance, activity, receipts, notifications and
-      support all read the same event state, so the app and WhatsApp never
-      disagree.
-- [ ] **Push notifications.** Needs `@capacitor/push-notifications`, APNs and
-      FCM, and a device-token registry on the server.
-- [ ] **Secure storage.** Move the session token out of `localStorage` into the
-      keychain (iOS) / encrypted storage (Android) via `@capacitor/preferences`
-      or the secure-storage plugin.
-- [ ] **Update the privacy manifest and the store privacy labels** for the
-      data the app now collects. This is a legal change, not a code change.
-- [ ] **Update `docs/whatsapp-to-app-coverage.md`** — it is the coverage
-      audit and the handoff for this work.
+      eligibility are decided on the server. The app may preview and request —
+      never authorise.
+- [ ] **Idempotency.** A transfer is submitted once with an idempotency key, and
+      the outcome distinguishes processing / held / unknown / failed / sent /
+      reversed. `unknown` must never invite a blind retry.
+- [ ] **Private approval.** The PIN goes into a private form and is verified by
+      the server — never in chat, never compared in the browser.
+- [ ] **Durable events.** Balance, activity, receipts, notifications and support
+      read the same event state, so the app and WhatsApp never disagree.
+- [ ] **Push notifications.** `@capacitor/push-notifications`, APNs, FCM and a
+      device-token registry on the server.
+- [ ] **Secure storage.** Move the session out of `localStorage` into the iOS
+      keychain / Android encrypted storage.
+- [ ] **Update the privacy manifest and both store privacy labels** for the data
+      that is now collected. This is a legal change, not a code change.
+- [ ] **Update `docs/whatsapp-to-app-coverage.md`**, the coverage audit and
+      handoff for this work.
 
 ---
 
 ## 8. Known gaps in this release
 
-- The app talks to no backend. Everything is local.
-- The Google Play upload uses a service account with the **Release manager**
-  role, which also needs to be granted to the app in the Play Console.
-- `xcrun altool` is deprecated by Apple; if a future Xcode removes it, switch
-  the upload step to Transporter or `xcrun iTMSTransporter`.
-- No push notifications, no offline mode, no deep links — all listed in the
-  plan in `.lovable/plan/`.
+- The app talks to no backend; everything is local.
+- No push notifications, no offline caching and no deep links.
+- Play's content rating and data safety are console-only, so the first Android
+  release lands as a draft.
+- The privacy manifest, both privacy labels and the policy text all have to be
+  updated together when live banking arrives.

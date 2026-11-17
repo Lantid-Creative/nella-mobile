@@ -52,3 +52,12 @@ credentials/
 *.njsproj
 *.sln
 *.sw?
+
+# Android upload key written by CI / local release builds
+android/keystore.properties
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.html
+fastlane/test_output
+fastlane/*.log
+vendor/bundle

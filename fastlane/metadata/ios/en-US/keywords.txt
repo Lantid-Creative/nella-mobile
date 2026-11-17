@@ -1,0 +1,1 @@
+money,chat,banking,transfer,airtime,bills,naira,wallet,payments,finance,nigeria,send

@@ -52,3 +52,6 @@
 - `bundle id` / `application id` is `creative.lantid.nella` on both platforms; never change it after the first store submission.
 - The release checklist — store accounts, certificates, CI secrets, listing metadata and submission steps — lives in `docs/store-release.md`. Keep it accurate as the native projects change.
 - The app must build offline of Lovable: no runtime dependency on `*.lovable.app`, the Lovable preview proxy, or any `/__l5e/...` path.
+- `store.config.json` is the single source for the public site URL, support address, copyright line and marketing version. The Fastfile refuses to release while the URLs are still the `.example` placeholder.
+- Store copy lives in `fastlane/metadata/` and screenshots in `fastlane/screenshots/` (Apple) and `fastlane/metadata/android/*/images/` (Play). Edit the files and re-run `npm run screenshots`; never retype copy in the store consoles, or the two drift apart.
+- Screenshots are captured from the running app by `scripts/capture-store-screenshots.mjs` at each store's exact resolution. Never add a composited mock-up, and re-capture whenever the UI changes.

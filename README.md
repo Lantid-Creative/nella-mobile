@@ -31,8 +31,9 @@ There are two builds, and they are different on purpose.
 | `bun run build`     | Server-rendered app (Nitro → Cloudflare Workers)               | Web hosting     |
 | `bun run build:app` | Prerendered SPA, one `index.html` per route, copied to `dist/` | The native apps |
 
-The native shell has no server, so `build:app` prerenders `/`, `/auth` and
-`/chat` into static pages the native WebView can open directly.
+The native shell has no server, so `build:app` prerenders every route the app
+can land on — `/`, `/auth`, `/chat` and the legal pages — into static HTML the
+native WebView can open directly.
 
 ## The native apps
 
@@ -59,11 +60,32 @@ This writes the source artwork to `assets/`, runs `@capacitor/assets` to cut
 every iOS/Android/PWA size, and then re-cuts the Android adaptive layers at
 the 108dp they need.
 
+### Store screenshots
+
+Every listing screenshot comes from the running app, captured at each store's
+exact resolution:
+
+```sh
+bun run build:app
+bun run screenshots
+```
+
+This writes the App Store screenshots to `fastlane/screenshots/`, the Play
+screenshots and graphics to `fastlane/metadata/android/`, and needs a Chromium
+(Playwright's is reused if present; set `CHROME_PATH` otherwise).
+
 ### Release
 
-`docs/store-release.md` is the checklist for the first submission to both
-stores: accounts, certificates, CI secrets, listing metadata and the steps to
-submit.
+Fill in `store.config.json` once — the public site URL and a support address —
+then release from the terminal:
+
+```sh
+gh workflow run store.yml -f platform=both -f mode=release
+```
+
+`docs/store-release.md` is the full checklist: the two one-time console steps,
+the GitHub secrets, what each lane does, and what has to change before the app
+handles real money.
 
 ## Lovable
 

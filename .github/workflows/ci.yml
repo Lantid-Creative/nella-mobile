@@ -41,6 +41,9 @@ jobs:
           test -f dist/index.html
           test -f dist/auth/index.html
           test -f dist/chat/index.html
+          test -f dist/privacy/index.html
+          test -f dist/terms/index.html
+          test -f dist/support/index.html
           test -d dist/assets
           echo "App bundle contents:"
           find dist -maxdepth 2 -name '*.html' | sort

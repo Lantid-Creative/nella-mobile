@@ -24,6 +24,9 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- The app ships no cryptography beyond the platform's own TLS. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Nella uses the camera so you can snap a bill or payment and pay it in chat. Photos are only used for the request you start — they are never uploaded or stored.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -1,0 +1,191 @@
+name: Store release
+
+# Builds and uploads Nella to the App Store and Google Play.
+#
+# Everything a human has to do is one-time and lives in the store consoles:
+# create the app record, accept the agreements, and fill the declarations the
+# APIs cannot (Play's content rating and data safety, Apple's pricing and
+# availability). After that this workflow does the rest.
+#
+# Run it from the terminal:
+#   gh workflow run store.yml -f platform=both -f mode=release
+#   gh workflow run store.yml -f platform=ios  -f mode=listing
+#
+# See docs/store-submission.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which store to release
+        type: choice
+        options: [both, ios, android]
+        default: both
+      mode:
+        description: "listing pushes text and screenshots only; release also builds and submits"
+        type: choice
+        options: [release, listing]
+        default: release
+  push:
+    tags:
+      - "ios-v*"
+      - "android-v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUN_VERSION: latest
+
+jobs:
+  ios:
+    name: App Store
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/ios-v')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'ios'))
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Show the Xcode toolchain
+        run: |
+          xcodebuild -version
+          xcode-select -p
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build the app bundle
+        run: bun run build:app
+
+      - name: Sync the native project
+        run: bunx cap sync ios
+
+      - name: Upload the listing only
+        if: inputs.mode == 'listing'
+        run: bundle exec fastlane ios listing
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+
+      - name: Build, upload and submit
+        if: inputs.mode != 'listing'
+        run: bundle exec fastlane ios release
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: Keep the IPA
+        if: inputs.mode != 'listing'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nella-ios-ipa
+          path: ios/build/*.ipa
+          if-no-files-found: warn
+          retention-days: 30
+
+  android:
+    name: Google Play
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/android-v')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.platform == 'both' || inputs.platform == 'android'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build the app bundle
+        run: bun run build:app
+
+      - name: Sync the native project
+        run: bunx cap sync android
+
+      - name: Write the Play service account
+        run: |
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play-service-account.json"
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+
+      - name: Write the upload key
+        if: inputs.mode != 'listing'
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/android/app/nella-upload.jks"
+          cat > "$GITHUB_WORKSPACE/android/keystore.properties" <<PROPERTIES
+          storeFile=nella-upload.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          PROPERTIES
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Build the signed bundle
+        if: inputs.mode != 'listing'
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Upload the listing only
+        if: inputs.mode == 'listing'
+        run: bundle exec fastlane android listing
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON_PATH: ${{ runner.temp }}/play-service-account.json
+          PLAY_TRACK: internal
+          PLAY_RELEASE_STATUS: draft
+
+      - name: Upload the bundle and listing
+        if: inputs.mode != 'listing'
+        run: bundle exec fastlane android release
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON_PATH: ${{ runner.temp }}/play-service-account.json
+          PLAY_TRACK: internal
+          PLAY_RELEASE_STATUS: draft
+
+      - name: Keep the bundle
+        if: inputs.mode != 'listing'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nella-android-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,14 @@
+# App Store Connect upload settings.
+#
+# The listing text and screenshots live in fastlane/metadata/ios and
+# fastlane/screenshots. The support, marketing and privacy URLs are passed by
+# the Fastfile straight from store.config.json, so there is one place to change
+# them. The binary is uploaded by the release lane, never by this file.
+app_identifier("creative.lantid.nella")
+metadata_path("./fastlane/metadata/ios")
+screenshots_path("./fastlane/screenshots")
+skip_binary_upload(true)
+skip_metadata(false)
+skip_screenshots(false)
+run_precheck_before_submit(false)
+force(true)
