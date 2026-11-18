@@ -54,12 +54,14 @@ def asc_api_key
 end
 
 # Every listing field that is not a text file lives here, so the App Store and
-# the app agree on where Nella lives.
+# the app agree on where Nella lives. deliver wants these per locale, so a
+# plain string is rejected: each URL is a Hash keyed by App Store locale.
 def listing_urls
+  locale = { "en-US" => nil }
   {
-    support_url: site_page("support"),
-    marketing_url: site_url,
-    privacy_url: site_page("privacy"),
+    support_url: locale.merge("en-US" => site_page("support")),
+    marketing_url: locale.merge("en-US" => site_url),
+    privacy_url: locale.merge("en-US" => site_page("privacy")),
     copyright: CONFIG.fetch("copyright"),
   }
 end
