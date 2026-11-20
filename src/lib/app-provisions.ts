@@ -89,7 +89,7 @@ export function paymentPreview(draft: PaymentDraft, sender: string): ReceiptPrev
     title: SERVICE_LABELS[draft.service],
     amount: Number(draft.amount),
     rows: [
-      ["Status", "Preview only — not submitted"],
+      ["Status", "Not sent — awaiting your approval"],
       ["Sender", sender],
       [
         draft.service === "transfer"

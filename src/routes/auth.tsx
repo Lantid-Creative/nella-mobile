@@ -1,60 +1,27 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  ScanFace,
-  LockKeyhole,
-  ShieldCheck,
-  Check,
-} from "lucide-react";
-import {
-  canEnterChat,
-  completeDemoKyc,
-  completeOnboarding,
-  currentUser,
-  normalisePhone,
-  resetDemoPin,
-  saveKycStep,
-  signIn,
-  signInVerified,
-  signUp,
-} from "@/lib/demo-store";
-import {
-  formatPhone,
-  loginPinReady,
-  readSetupDraft,
-  saveSetupDraft,
-  clearSetupDraft,
-} from "@/lib/mobile-ux";
-import {
-  biometricPhone,
-  biometricsAvailable,
-  enableBiometrics,
-  unlockWithBiometrics,
-} from "@/lib/biometrics";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
+import { currentUser, signIn, ApiError } from "@/lib/api";
+import { formatPhone, loginPinReady } from "@/lib/mobile-ux";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
-import { KycSetup } from "@/components/kyc-setup";
 import nellaLogo from "@/assets/nella-nav-logo.png";
 import nellaLogoDark from "@/assets/nella-footer-logo.png";
+
+const WHATSAPP = "https://wa.me/2348079574994";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Nella — Log in or get started" },
+      { title: "Nella — Log in" },
       {
         name: "description",
-        content:
-          "Log in to Nella or complete guided signup and required demo KYC setup before entering chat.",
+        content: "Log in to Nella, your money companion on WhatsApp and in the app.",
       },
-      { property: "og:title", content: "Nella — Log in or get started" },
+      { property: "og:title", content: "Nella — Log in" },
       {
         property: "og:description",
-        content:
-          "A friendly, chat-first money experience with guided signup and required demo KYC setup.",
+        content: "Log in to Nella with the phone number and PIN you use on WhatsApp.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -65,240 +32,58 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"in" | "up" | "reset">("in");
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
-  const [pin2, setPin2] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [bioPhone, setBioPhone] = useState<string | null>(null);
-  const [bioBusy, setBioBusy] = useState(false);
-  const [kycStep, setKycStep] = useState(0);
-  const [draftReady, setDraftReady] = useState(false);
-  const restoreUser = (user: NonNullable<ReturnType<typeof currentUser>>) => {
-    setName(user.name);
-    setPhone(formatPhone(user.phone));
-    setMode("up");
-    setKycStep(user.kycStep ?? 0);
-    setStep(user.kycSetupComplete ? 4 : 3);
-    setPin("");
-    setPin2("");
-  };
-  const resumeAccount = () => {
-    const user = currentUser();
-    if (canEnterChat(user)) {
-      navigate({ to: "/chat", replace: true });
-      return;
-    }
-    if (user) restoreUser(user);
-  };
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
-    const user = currentUser();
-    if (canEnterChat(user)) navigate({ to: "/chat", replace: true });
-    else if (user) restoreUser(user);
-    else {
-      const draft = readSetupDraft();
-      if (draft) {
-        setName(draft.name);
-        setPhone(draft.phone);
-        setMode("up");
-        setStep(draft.step);
-      }
-    }
-    setDraftReady(true);
+    if (currentUser()) navigate({ to: "/chat", replace: true });
   }, [navigate]);
-  useEffect(() => {
-    if (draftReady && mode === "up" && step < 3) {
-      if (!saveSetupDraft({ name, phone, step }))
-        setError("Your browser couldn’t save setup progress. Keep this page open.");
-    }
-  }, [draftReady, mode, step, name, phone]);
-  useEffect(() => {
-    void biometricsAvailable().then((ok) => {
-      if (ok) setBioPhone(biometricPhone());
-    });
-  }, []);
-  const switchMode = (next: typeof mode) => {
-    setMode(next);
-    const draft = next === "up" ? readSetupDraft() : null;
-    setStep(draft?.step ?? 0);
-    if (draft) {
-      setName(draft.name);
-      setPhone(draft.phone);
-    }
-    setPin("");
-    setPin2("");
+
+  const login = async (value: string) => {
+    if (busy) return;
     setError("");
-    setSuccess("");
-  };
-  const unlock = async () => {
-    setBioBusy(true);
-    setError("");
-    const unlocked = await unlockWithBiometrics();
-    setBioBusy(false);
-    if (!unlocked) {
-      setError("Biometric unlock didn't work this time. Use your PIN instead.");
-      return;
-    }
+    setBusy(true);
     try {
-      signInVerified(unlocked);
-      resumeAccount();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Couldn't open your account. Use your PIN instead.",
-      );
-    }
-  };
-  const finishSetup = () => {
-    try {
-      completeOnboarding();
+      const local = phone.replace(/\D/g, "");
+      await signIn(`0${local}`, value);
       navigate({ to: "/chat", replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save your setup. Try again.");
-    }
-  };
-  const finishKyc = async () => {
-    setError("");
-    try {
-      completeDemoKyc();
-      if ((await biometricsAvailable()) && !bioPhone) {
-        setStep(4);
-        return;
-      }
-      finishSetup();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save your KYC setup. Try again.");
-    }
-  };
-  const setupBiometrics = async () => {
-    setBioBusy(true);
-    setError("");
-    try {
-      const phoneNumber = normalisePhone(phone);
-      if (!phoneNumber) throw new Error("Enter a valid Nigerian phone number.");
-      await enableBiometrics(phoneNumber, name);
-      setBioPhone(phoneNumber);
-      finishSetup();
-    } catch (err) {
+      setPin("");
       setError(
-        err instanceof Error ? err.message : "Biometric setup failed. Your PIN still works.",
+        err instanceof ApiError
+          ? err.message
+          : "Couldn’t reach Nella. Check your connection and try again.",
       );
     } finally {
-      setBioBusy(false);
+      setBusy(false);
     }
   };
-  const login = (value: string) => {
-    setError("");
-    try {
-      signIn(phone, value);
-      setPin("");
-      resumeAccount();
-    } catch (err) {
-      setPin("");
-      setError(err instanceof Error ? err.message : "Couldn’t log in. Try again.");
-    }
-  };
-  useEffect(() => {
-    const clearPrivate = () => {
-      if (document.hidden) {
-        setPin("");
-        setPin2("");
-        setShowPin(false);
-      }
-    };
-    document.addEventListener("visibilitychange", clearPrivate);
-    return () => document.removeEventListener("visibilitychange", clearPrivate);
-  }, []);
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-    try {
-      if (mode === "up" && step === 0) {
-        setStep(1);
-        return;
-      }
-      if (mode === "up" && step === 1) {
-        if (name.trim().split(/\s+/).length < 2) throw new Error("Enter your first and last name.");
-        if (!normalisePhone(phone)) throw new Error("Enter a valid Nigerian phone number.");
-        setStep(2);
-        return;
-      }
-      if (mode === "up" && step === 3) {
-        return;
-      }
-      if (mode === "up") {
-        if (pin !== pin2) throw new Error("The two PINs don't match.");
-        signUp(name, phone, pin);
-        clearSetupDraft();
-        setPin("");
-        setPin2("");
-        setKycStep(0);
-        setStep(3);
-      } else if (mode === "reset") {
-        if (pin !== pin2) throw new Error("The two PINs don't match.");
-        resetDemoPin(phone, pin);
-        switchMode("in");
-        setSuccess("Your demo PIN has been reset in this browser. You can log in now.");
-      } else {
-        login(pin);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+    if (!/^[789][01]\d{8}$/.test(phone.replace(/\D/g, ""))) {
+      setError("Enter the 10-digit phone number on your Nella account.");
+      return;
     }
+    if (!/^\d{4}$/.test(pin)) {
+      setError("Your PIN is 4 digits.");
+      return;
+    }
+    await login(pin);
   };
+
   const field =
     "h-13 w-full min-w-0 rounded-xl border border-input bg-card px-4 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/10";
   const digits = (v: string) => v.replace(/\D/g, "").slice(0, 4);
-  const title =
-    mode === "in"
-      ? "Welcome back."
-      : mode === "reset"
-        ? "Let's get you back in."
-        : step === 0
-          ? "Hi, I'm Nella."
-          : step === 1
-            ? "Let's get to know you."
-            : step === 3
-              ? "Finish your setup."
-              : "A PIN, just for you.";
-  const subtitle =
-    mode === "in"
-      ? "Your money companion is right here."
-      : mode === "reset"
-        ? "Reset the demo PIN saved in this browser."
-        : step === 0
-          ? "Your money, in a chat. Let's get you started."
-          : step === 1
-            ? "What should I call you?"
-            : step === 3
-              ? "Check your details before meeting Nella."
-              : "Choose a 4-digit test PIN to access this demo.";
+
   return (
     <main className="auth-surface flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
         <header className="grid h-12 grid-cols-[minmax(0,1fr)_auto] items-center">
-          <div>
-            {mode !== "in" && step < 3 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Go back"
-                className="h-11 w-11 rounded-full"
-                onClick={() => {
-                  if (mode === "up" && step > 0) {
-                    setStep(step - 1);
-                    setError("");
-                  } else switchMode("in");
-                }}
-              >
-                <ArrowLeft />
-              </Button>
-            )}
-          </div>
+          <span />
           <span className="text-2xl font-extrabold text-primary">
             <img
               src={nellaLogo}
@@ -316,326 +101,134 @@ function AuthPage() {
             />
           </span>
         </header>
-        {mode === "up" && (
-          <div className="mt-4">
-            <div className="mb-2 flex justify-between text-xs font-semibold text-muted-foreground">
-              <span>
-                {step < 2
-                  ? "Your profile"
-                  : step === 2
-                    ? "Private PIN"
-                    : step === 3
-                      ? "Demo KYC"
-                      : "Device unlock"}
-              </span>
-              <span>Step {step < 3 ? step + 1 : step === 3 ? 4 + kycStep : 7} of 7</span>
-            </div>
-            <div
-              role="progressbar"
-              aria-label="Account setup"
-              aria-valuemin={1}
-              aria-valuemax={7}
-              aria-valuenow={step < 3 ? step + 1 : step === 3 ? 4 + kycStep : 7}
-              className="flex gap-1"
-            >
-              {[0, 1, 2, 3, 4, 5, 6].map((s) => (
-                <span
-                  key={s}
-                  className={`h-1 flex-1 rounded-full ${s <= (step < 3 ? step : step === 3 ? 3 + kycStep : 6) ? "bg-primary" : "bg-border"}`}
-                />
-              ))}
-            </div>
+        <div className="step-enter flex flex-1 flex-col justify-center py-5">
+          <div className="mb-5 flex items-center gap-3">
+            <NellaMascot className="h-24 w-24" />
+            <span className="rounded-xl rounded-bl-none bg-secondary px-4 py-2 text-sm font-semibold text-primary">
+              Good to see you 👋
+            </span>
           </div>
-        )}
-        <div
-          key={`${mode}-${step}`}
-          className="step-enter flex flex-1 flex-col justify-center py-5"
-        >
-          {mode === "up" && step === 3 ? (
-            <KycSetup
-              name={name}
-              phone={normalisePhone(phone) ?? phone}
-              step={kycStep}
-              onStepChange={(next) => {
-                try {
-                  saveKycStep(next);
-                  setKycStep(next);
-                  setError("");
-                } catch {
-                  setError("Couldn’t save your progress. Please try again.");
-                }
-              }}
-              error={error}
-              onComplete={() => void finishKyc()}
-            />
-          ) : mode === "up" && step === 4 ? (
-            <div className="flex flex-1 flex-col justify-center">
-              <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-secondary">
-                <ScanFace className="h-14 w-14 text-primary" />
-              </div>
-              <h1 className="mt-6 text-[28px] font-extrabold leading-tight">
-                Unlock with biometrics.
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Next time you open Nella, use your phone's own unlock method — fingerprint, face or
-                pattern — instead of your PIN. Your payment PIN stays separate and is never
-                replaced.
-              </p>
-              {error && (
-                <p
-                  role="alert"
-                  className="mt-5 rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
-                >
-                  {error}
-                </p>
-              )}
-              <div className="mt-7 space-y-3">
-                <Button
-                  className="h-13 w-full rounded-xl font-bold shadow-glow"
-                  disabled={bioBusy}
-                  onClick={() => void setupBiometrics()}
-                >
-                  {bioBusy ? "Waiting for your device…" : "Set up biometric unlock"}
-                  <ScanFace />
-                </Button>
-                <Button variant="ghost" className="h-12 w-full" onClick={finishSetup}>
-                  Maybe later
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mb-5 flex items-center gap-3">
-                <NellaMascot
-                  className={mode === "up" && step === 0 ? "h-44 w-44 mx-auto" : "h-24 w-24"}
+          <h1 className="text-[28px] font-extrabold leading-tight">Welcome back.</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Your money companion is right here.
+          </p>
+          <form onSubmit={submit} className="mt-7 space-y-5">
+            <label className="block space-y-2">
+              <span className="text-sm font-semibold">Phone number</span>
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
+                <span className="flex items-center rounded-xl border border-input bg-secondary px-3 text-sm font-semibold">
+                  +234
+                </span>
+                <input
+                  aria-label="Phone number"
+                  className={field}
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  required
+                  placeholder="801 234 5678"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(formatPhone(e.target.value));
+                    setError("");
+                  }}
                 />
-                {!(mode === "up" && step === 0) && (
-                  <span className="rounded-xl rounded-bl-none bg-secondary px-4 py-2 text-sm font-semibold text-primary">
-                    {mode === "in"
-                      ? "Good to see you 👋"
-                      : step === 2
-                        ? "Almost there!"
-                        : "Hello there 👋"}
-                  </span>
-                )}
               </div>
-              <h1 className="text-[28px] font-extrabold leading-tight">{title}</h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
-              <form onSubmit={submit} className="mt-7 space-y-5">
-                {mode === "up" && step === 0 ? (
-                  <div className="space-y-5">
-                    {[
-                      ["01", "A little about you", "Your name and phone number."],
-                      ["02", "Your private PIN", "A test PIN for this demo."],
-                      [
-                        "03",
-                        "Required KYC setup",
-                        "Review your identity and sample address before chat.",
-                      ],
-                    ].map(([n, t, d]) => (
-                      <div key={n} className="flex items-center gap-4">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-primary">
-                          {n}
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold">{t}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{d}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="border-t border-border pt-4">
-                      <p className="flex items-center gap-2 text-xs font-semibold">
-                        <ShieldCheck className="h-4 w-4 text-primary" /> When live account opening
-                        is available
-                      </p>
-                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                        You'll verify your NIN, BVN, date of birth and home address in a secure
-                        form. Don't send these details in chat. Identity verification isn't
-                        connected yet.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {mode === "up" && step === 1 && (
-                      <label className="block space-y-2">
-                        <span className="text-sm font-semibold">Full name</span>
-                        <input
-                          autoFocus
-                          className={field}
-                          required
-                          autoComplete="name"
-                          placeholder="First and last name"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                        />
-                      </label>
-                    )}
-                    {(mode !== "up" || step === 1) && (
-                      <label className="block space-y-2">
-                        <span className="text-sm font-semibold">Phone number</span>
-                        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
-                          <span className="flex items-center rounded-xl border border-input bg-secondary px-3 text-sm font-semibold">
-                            +234
-                          </span>
-                          <input
-                            aria-label="Phone number"
-                            className={field}
-                            inputMode="tel"
-                            autoComplete="tel-national"
-                            required
-                            placeholder="801 234 5678"
-                            value={phone}
-                            onChange={(e) => {
-                              setPhone(formatPhone(e.target.value));
-                              setError("");
-                            }}
-                          />
-                        </div>
-                      </label>
-                    )}
-                    {(mode !== "up" || step === 2) && (
-                      <>
-                        <label className="block space-y-2">
-                          <span className="text-sm font-semibold">
-                            {mode === "in" ? "Demo PIN" : "Create demo PIN"}
-                          </span>
-                          <div className="relative">
-                            <input
-                              aria-label={mode === "in" ? "Demo PIN" : "Create demo PIN"}
-                              aria-invalid={Boolean(error)}
-                              aria-describedby={error ? "auth-error" : undefined}
-                              autoFocus={mode === "up"}
-                              className={`${field} pr-12 text-center tabular-nums`}
-                              type={showPin ? "text" : "password"}
-                              inputMode="numeric"
-                              autoComplete={mode === "in" ? "current-password" : "new-password"}
-                              maxLength={4}
-                              minLength={4}
-                              required
-                              placeholder="4-digit PIN"
-                              value={pin}
-                              onChange={(e) => {
-                                const value = digits(e.target.value);
-                                setPin(value);
-                                setError("");
-                                if (mode === "in" && loginPinReady(phone, value)) login(value);
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label={showPin ? "Hide PIN" : "Show PIN"}
-                              className="absolute right-1 top-1 h-11 w-11 text-muted-foreground"
-                              onClick={() => setShowPin(!showPin)}
-                            >
-                              {showPin ? <EyeOff /> : <Eye />}
-                            </Button>
-                          </div>
-                        </label>
-                        {mode !== "in" && (
-                          <label className="block space-y-2">
-                            <span className="text-sm font-semibold">Confirm demo PIN</span>
-                            <input
-                              className={`${field} text-center tabular-nums`}
-                              type={showPin ? "text" : "password"}
-                              inputMode="numeric"
-                              autoComplete="new-password"
-                              maxLength={4}
-                              minLength={4}
-                              required
-                              placeholder="Enter your PIN again"
-                              value={pin2}
-                              onChange={(e) => setPin2(digits(e.target.value))}
-                            />
-                          </label>
-                        )}
-                        {mode === "in" && (
-                          <div className="flex justify-end">
-                            <Button
-                              type="button"
-                              variant="link"
-                              className="h-11 px-0 text-sm"
-                              onClick={() => switchMode("reset")}
-                            >
-                              Forgot demo PIN?
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-                {error && (
-                  <p
-                    id="auth-error"
-                    role="alert"
-                    className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
-                  >
-                    {error}
-                  </p>
-                )}
-                {success && (
-                  <p role="status" className="flex items-start gap-2 text-sm text-primary">
-                    <Check className="h-5 w-5 shrink-0" />
-                    {success}
-                  </p>
-                )}
-                <Button type="submit" className="h-13 w-full rounded-xl font-bold shadow-glow">
-                  {mode === "in"
-                    ? "Log in"
-                    : mode === "reset"
-                      ? "Reset demo PIN"
-                      : step === 0
-                        ? "Let's get started"
-                        : step === 1
-                          ? "Continue"
-                          : step === 2
-                            ? "Create demo account"
-                            : "Complete setup"}
-                  <ArrowRight />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-semibold">PIN</span>
+              <div className="relative">
+                <input
+                  aria-label="PIN"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "auth-error" : undefined}
+                  className={`${field} pr-12 text-center tabular-nums`}
+                  type={showPin ? "text" : "password"}
+                  inputMode="numeric"
+                  autoComplete="current-password"
+                  maxLength={4}
+                  minLength={4}
+                  required
+                  placeholder="4-digit PIN"
+                  value={pin}
+                  onChange={(e) => {
+                    const value = digits(e.target.value);
+                    setPin(value);
+                    setError("");
+                    if (!busy && loginPinReady(phone, value)) void login(value);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={showPin ? "Hide PIN" : "Show PIN"}
+                  className="absolute right-1 top-1 h-11 w-11 text-muted-foreground"
+                  onClick={() => setShowPin(!showPin)}
+                >
+                  {showPin ? <EyeOff /> : <Eye />}
                 </Button>
-                {mode === "in" && bioPhone && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-13 w-full rounded-xl font-bold"
-                    disabled={bioBusy}
-                    onClick={() => void unlock()}
-                  >
-                    <ScanFace className="text-primary" />
-                    {bioBusy ? "Waiting for your device…" : "Unlock with biometrics"}
-                  </Button>
-                )}
-              </form>
-              {mode === "in" && (
-                <p className="mt-6 text-center text-sm text-muted-foreground">
-                  New to Nella?{" "}
-                  <Button
-                    variant="link"
-                    className="h-11 px-1 font-bold"
-                    onClick={() => switchMode("up")}
-                  >
-                    Get started
-                  </Button>
-                </p>
-              )}
-              {mode === "up" && step === 2 && (
-                <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                  Use a unique test PIN, not your banking PIN. This demo stores it in this browser
-                  only.
-                </p>
-              )}
-            </>
-          )}
+              </div>
+            </label>
+            <div className="flex justify-end">
+              <a
+                href={`${WHATSAPP}?text=${encodeURIComponent("I need help resetting my Nella PIN.")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-11 items-center px-0 text-sm font-bold text-primary underline-offset-4 hover:underline"
+              >
+                Forgot PIN?
+              </a>
+            </div>
+            {error && (
+              <p
+                id="auth-error"
+                role="alert"
+                className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+              >
+                {error}
+              </p>
+            )}
+            <Button
+              type="submit"
+              disabled={busy}
+              className="h-13 w-full rounded-xl font-bold shadow-glow"
+            >
+              {busy ? "Signing in…" : "Log in"}
+              <ArrowRight />
+            </Button>
+          </form>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            New to Nella?{" "}
+            <a
+              href={`${WHATSAPP}?text=${encodeURIComponent("Hi Nella, I'd like to open an account.")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-bold text-primary underline-offset-4 hover:underline"
+            >
+              Chat with us on WhatsApp
+            </a>
+          </p>
         </div>
         <footer className="border-t border-border pt-4 text-center">
           <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-            <LockKeyhole className="h-3.5 w-3.5" /> Preview only · No real money moves
+            <LockKeyhole className="h-3.5 w-3.5" /> Nella never asks for your PIN in chat
           </p>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            Accounts stay in this browser. Live banking isn't connected.
+            Banking services by VFD Microfinance Bank. Nella is a product of Lantid Creative LTD.
+          </p>
+          <p className="mt-1 flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            <a href="/privacy" className="underline underline-offset-2">
+              Privacy
+            </a>
+            <span>·</span>
+            <a href="/terms" className="underline underline-offset-2">
+              Terms
+            </a>
+            <span>·</span>
+            <a href="/support" className="underline underline-offset-2">
+              Support
+            </a>
           </p>
         </footer>
       </div>

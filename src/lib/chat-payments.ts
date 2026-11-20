@@ -1,4 +1,4 @@
-import { demoReply } from "./demo-store";
+import { offlineReply } from "./replies";
 import { parsePaymentRequest } from "./payment-request";
 import {
   paymentPreview,
@@ -145,7 +145,7 @@ export function startPayment(
     ? { ...seed }
     : { service, provider: "", destination: "", plan: "", amount: "", narration: "" };
   // Keep the existing complete-message payment parser as the source of transfer/mobile details.
-  const parsed = demoReply(raw).flatMap((part) =>
+  const parsed = offlineReply(raw).flatMap((part) =>
     part.card?.kind === "approval"
       ? [part.card]
       : part.card?.kind === "narration"
@@ -214,7 +214,7 @@ export function answerPayment(
   if (state.field === "review")
     return {
       state,
-      text: "Payments aren’t connected yet. You can edit these details or cancel. No payment has been submitted.",
+      text: "Check the details, then choose Approve payment — I will fetch the live quote before your PIN. You can edit or cancel here.",
       choices: choices(state),
     };
   const draft = { ...state.draft };

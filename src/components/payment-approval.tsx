@@ -2,24 +2,44 @@ import { useEffect, useState, type FormEvent } from "react";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { naira, type DemoUser } from "@/lib/demo-store";
+import { naira } from "@/lib/chat-store";
 import type { ReceiptPreview } from "@/lib/app-provisions";
-import { demoApprovalError } from "@/lib/payment-approval";
+import type { ExecuteResult } from "@/lib/api";
+
+const DETAIL_ROWS = [
+  "Recipient account",
+  "Phone number",
+  "Meter number",
+  "Smartcard number",
+  "Customer number",
+  "Recipient",
+  "Account name",
+  "Bank",
+  "Provider",
+  "Plan / package",
+  "Narration",
+  "Fee",
+  "Total",
+  "Reference",
+];
 
 export function PaymentApproval({
   receipt,
-  user,
   onClose,
-  onComplete,
+  onApprove,
+  onApproved,
 }: {
   receipt: ReceiptPreview;
-  user: DemoUser;
   onClose: () => void;
-  onComplete: () => void;
+  onApprove: (pin: string) => Promise<ExecuteResult>;
+  onApproved: (message: string) => void;
 }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [shake, setShake] = useState(0);
   const close = () => {
+    if (busy) return;
     setPin("");
     setError("");
     onClose();
@@ -43,26 +63,37 @@ export function PaymentApproval({
       window.removeEventListener("pagehide", leave);
     };
   }, [onClose]);
-  const [shake, setShake] = useState(0);
-  const check = (value: string) => {
-    const problem = demoApprovalError(value, user);
+
+  const submitPin = async (value: string) => {
+    if (busy) return;
     setPin("");
-    if (problem) {
-      setError(problem);
+    setBusy(true);
+    setError("");
+    try {
+      const result = await onApprove(value);
+      if (result.ok) {
+        onApproved(result.message);
+        return;
+      }
+      setError(result.message || "That payment was not approved. Nothing was sent.");
       setShake((n) => n + 1);
       try {
         navigator.vibrate?.([30, 40, 30]);
       } catch {
         /* unsupported */
       }
-      return;
+    } catch {
+      setError("Couldn’t reach Nella. Check your connection — nothing was sent twice.");
+    } finally {
+      setBusy(false);
     }
-    onComplete();
   };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    check(pin);
+    if (/^\d{4}$/.test(pin)) void submitPin(pin);
   };
+
   return (
     <Dialog
       open
@@ -75,7 +106,7 @@ export function PaymentApproval({
           <LockKeyhole className="mb-3 h-6 w-6 text-primary" />
           <DialogTitle>Approve payment</DialogTitle>
           <DialogDescription className="mt-2">
-            Demo approval only · No money will move
+            Enter the 4-digit PIN you use for Nella.
           </DialogDescription>
         </div>
         <div className="border-y border-border py-4">
@@ -83,18 +114,7 @@ export function PaymentApproval({
           <p className="mt-1 break-all text-2xl font-extrabold">{naira(receipt.amount)}</p>
           <dl className="mt-3 space-y-2 text-sm">
             {receipt.rows
-              .filter(([key]) =>
-                [
-                  "Recipient account",
-                  "Phone number",
-                  "Meter number",
-                  "Smartcard number",
-                  "Bank",
-                  "Provider",
-                  "Plan / package",
-                  "Narration",
-                ].includes(key),
-              )
+              .filter(([key]) => DETAIL_ROWS.includes(key))
               .map(([key, value]) => (
                 <div key={key} className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">{key}</dt>
@@ -102,25 +122,23 @@ export function PaymentApproval({
                 </div>
               ))}
           </dl>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Recipient, availability and fees are not verified.
-          </p>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <label className="block text-sm font-semibold">
-            4-digit demo PIN
+            4-digit PIN
             <input
-              aria-label="4-digit demo PIN"
+              aria-label="4-digit PIN"
               type="password"
               inputMode="numeric"
               autoComplete="off"
               maxLength={4}
+              disabled={busy}
               value={pin}
               onChange={(event) => {
                 const value = event.target.value.replace(/\D/g, "").slice(0, 4);
                 setPin(value);
                 setError("");
-                if (value.length === 4) check(value);
+                if (value.length === 4) void submitPin(value);
               }}
               key={shake}
               className={`${shake ? "pin-shake " : ""}mt-2 h-14 w-full rounded-lg border border-input bg-card px-4 text-center text-xl tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring`}
@@ -128,16 +146,18 @@ export function PaymentApproval({
             />
           </label>
           <p className="text-xs text-muted-foreground">
-            Use the test PIN from your demo account, never your banking PIN.
+            {busy
+              ? "Sending your payment…"
+              : "Your PIN approves this payment. Nella never asks for it in chat."}
           </p>
           {error && (
             <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
           )}
-          <Button type="submit" disabled={pin.length !== 4} className="h-12 w-full">
+          <Button type="submit" disabled={busy || pin.length !== 4} className="h-12 w-full">
             <ShieldCheck />
-            Confirm demo approval
+            {busy ? "Processing…" : "Confirm payment"}
           </Button>
           <Button type="button" variant="outline" className="h-11 w-full" onClick={close}>
             Back to chat

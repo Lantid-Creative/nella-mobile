@@ -37,7 +37,7 @@ describe("WhatsApp-to-app provisions", () => {
   });
   it("does not generate a successful transaction or provider identifiers from a preview", () => {
     const receipt = paymentPreview(transfer, "Ada Okafor");
-    expect(receipt.rows).toContainEqual(["Status", "Preview only — not submitted"]);
+    expect(receipt.rows).toContainEqual(["Status", "Not sent — awaiting your approval"]);
     expect(receipt.rows).toContainEqual(["Reference", "Not issued"]);
     expect(receipt.rows).toContainEqual(["Session ID", "Not issued"]);
   });

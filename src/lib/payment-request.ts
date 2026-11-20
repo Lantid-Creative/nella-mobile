@@ -1,4 +1,4 @@
-import { normalisePhone } from "./demo-store";
+import { normalisePhone } from "./chat-store";
 import type { MoneyService, PaymentDraft } from "./app-provisions";
 
 const bankAliases: [string, RegExp][] = [

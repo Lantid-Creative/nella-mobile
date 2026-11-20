@@ -26,18 +26,36 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  currentUser,
-  canEnterChat,
-  demoReply,
   loadChat,
   naira,
+  nationalPhone,
+  type Card,
   saveChat,
-  signOut,
   type ApprovalCard,
   type ChatMedia,
   type ChatMsg,
-  type DemoUser,
-} from "@/lib/demo-store";
+} from "@/lib/chat-store";
+import { offlineReply } from "@/lib/replies";
+import {
+  ApiError,
+  balance as fetchBalance,
+  billBillers,
+  billItems,
+  currentUser,
+  executeBill,
+  executeTransfer,
+  history as fetchHistory,
+  nameEnquiry,
+  quoteBill,
+  quoteTransfer,
+  receipt as fetchReceipt,
+  signOut,
+  type BillCategory,
+  type ExecuteResult,
+  type MobileBillItem,
+  type PublicUser,
+  type ReceiptPreview,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { NellaMascot } from "@/components/nella-mascot";
 import { dayLabel, filterChoices, greeting, groupInfo, haptic, paymentSteps } from "@/lib/chat-ux";
@@ -48,12 +66,7 @@ import { useVoiceNote } from "@/hooks/use-voice-note";
 import { draftFromPreview } from "@/lib/preview-workspace";
 import { PaymentApproval } from "@/components/payment-approval";
 import { NellaServices, PaymentPreviewCard } from "@/components/nella-services";
-import {
-  panelForMessage,
-  paymentPreview,
-  type AppPanel,
-  type ReceiptPreview,
-} from "@/lib/app-provisions";
+import { panelForMessage, paymentPreview, type AppPanel } from "@/lib/app-provisions";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   usePendingReply,
@@ -99,6 +112,12 @@ export const Route = createFileRoute("/chat")({
 const NARRATIONS = ["Rent", "Food", "Family", "Business"];
 const uid = () => crypto.randomUUID();
 
+type PendingApproval = {
+  receipt: ReceiptPreview;
+  reference: string;
+  execute: (pin: string) => Promise<ExecuteResult>;
+};
+
 type QuickAction = {
   label: string;
   prompt: string;
@@ -132,7 +151,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 function ChatPage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<DemoUser | null>(null);
+  const [user, setUser] = useState<PublicUser | null>(null);
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
@@ -153,7 +172,7 @@ function ChatPage() {
     setMenu,
   } = useServiceNavigation();
   const [payment, setPayment] = useState<PaymentConversation | null>(null);
-  const [approval, setApproval] = useState<PaymentConversation | null>(null);
+  const [approval, setApproval] = useState<PendingApproval | null>(null);
   const [chatChoices, setChatChoices] = useState<string[]>([]);
   const [profileFull, setProfileFull] = useState(false);
   const dragStart = useRef<number | null>(null);
@@ -223,7 +242,7 @@ function ChatPage() {
 
   useEffect(() => {
     const u = currentUser();
-    if (!u || !canEnterChat(u)) {
+    if (!u) {
       navigate({ to: "/auth", replace: true });
       return;
     }
@@ -306,6 +325,264 @@ function ChatPage() {
   const patch = (id: string, fn: (m: ChatMsg) => ChatMsg) =>
     commit(msgsRef.current.map((m) => (m.id === id ? fn(m) : m)));
 
+  const say = (text: string, card?: Card) => nellaSays([card ? { text, card } : { text }]);
+
+  const showBalance = async () => {
+    try {
+      const b = await fetchBalance();
+      nellaSays([
+        {
+          text: "Here's your Nella wallet.",
+          card: { kind: "balance", amount: naira(b.balanceMinor / 100) },
+        },
+      ]);
+    } catch (error) {
+      say(
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't reach Nella. Check your connection and try again.",
+      );
+    }
+  };
+
+  const showActivity = async () => {
+    try {
+      const page = await fetchHistory(1, 5);
+      if (!page.transactions.length) {
+        say("No payments yet. Anything you send or receive will show up here.");
+        return;
+      }
+      const lines = page.transactions.map((t) => {
+        const when = new Date(t.createdAt).toLocaleDateString([], {
+          day: "numeric",
+          month: "short",
+        });
+        return `${t.type === "credit" ? "+" : "−"}${naira(t.amountMinor / 100)} · ${t.description} · ${when}`;
+      });
+      say(
+        `Your last ${page.transactions.length} transaction${page.transactions.length === 1 ? "" : "s"}:\n${lines.join("\n")}\n\nSend "receipt <reference>" for a full receipt, or open Activity & receipts.`,
+      );
+    } catch (error) {
+      say(
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't load your activity. Check your connection and try again.",
+      );
+    }
+  };
+
+  const showReceipt = async (reference: string) => {
+    try {
+      const r = await fetchReceipt(reference);
+      nellaSays([
+        {
+          text: "Here's your receipt.",
+          card: { kind: "receipt", title: r.title, amount: r.amount, rows: r.rows },
+        },
+      ]);
+    } catch (error) {
+      say(
+        error instanceof ApiError ? error.message : "I couldn't find a receipt for that reference.",
+      );
+    }
+  };
+
+  const matchBiller = <T extends { name: string }>(billers: T[], label: string): T | null => {
+    const want = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!want) return null;
+    return (
+      billers.find((b) => b.name.toLowerCase().replace(/[^a-z0-9]/g, "") === want) ||
+      billers.find((b) => {
+        const name = b.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return name.includes(want) || want.includes(name);
+      }) ||
+      null
+    );
+  };
+
+  const pickBillItem = (items: MobileBillItem[], draft: PaymentDraft): MobileBillItem | null => {
+    const open = items.find((i) => !i.fixed || i.amountMinor <= 0);
+    if (draft.service === "airtime") return open || items[0] || null;
+    if (draft.service === "electricity") {
+      const want = /post/i.test(draft.plan) ? "postpaid" : "prepaid";
+      return (
+        items.find((i) => i.name.toLowerCase().includes(want)) ||
+        items.find((i) => i.code.toLowerCase().includes(want)) ||
+        items[0] ||
+        null
+      );
+    }
+    const plan = draft.plan.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!plan) return open || items[0] || null;
+    const exact = items.find((i) => i.name.toLowerCase().replace(/[^a-z0-9]/g, "") === plan);
+    if (exact) return exact;
+    const both = items.filter((i) => {
+      const name = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return name.length >= 3 && (name.includes(plan) || plan.includes(name));
+    });
+    if (both.length === 1) return both[0]!;
+    // "1GB weekly" style: the size and the period decide the bundle.
+    const size = draft.plan.match(/(\d+(?:\.\d+)?)\s*(gb|mb)/i);
+    const period = draft.plan.match(/\b(daily|weekly|monthly|day|week|month)\b/i);
+    if (size || period) {
+      const wantSize = size ? `${size[1]}${size[2]!.toLowerCase() === "gb" ? "gb" : "mb"}` : "";
+      const wantPeriod = period
+        ? period[1]!
+            .toLowerCase()
+            .replace(/^day$/, "daily")
+            .replace(/^week$/, "weekly")
+            .replace(/^month$/, "monthly")
+        : "";
+      const scored = items.find((i) => {
+        const name = i.name.toLowerCase().replace(/\s+/g, "");
+        return (
+          (!wantSize || name.includes(wantSize)) &&
+          (!wantPeriod || name.includes(wantPeriod.slice(0, 5)))
+        );
+      });
+      if (scored) return scored;
+    }
+    return both[0] || null;
+  };
+
+  const loadPlanChoices = async (draft: PaymentDraft) => {
+    if (!draft.provider || (draft.service !== "data" && draft.service !== "cable")) return;
+    try {
+      const billers = await billBillers(draft.service as BillCategory);
+      const biller = matchBiller(billers, draft.provider);
+      if (!biller) return;
+      const { items } = await billItems(biller.id);
+      const names = items
+        .filter((i) => i.fixed && i.amountMinor > 0)
+        .map((i) => i.name)
+        .slice(0, 10);
+      if (names.length) setChatChoices(names);
+    } catch {
+      /* keep the typed plans as a fallback */
+    }
+  };
+
+  const prepareApproval = async (conversation: PaymentConversation) => {
+    const draft = { ...conversation.draft };
+    const amountMinor = Math.round(Number(draft.amount || 0) * 100);
+    if (!amountMinor || amountMinor < 10_000) {
+      say("The minimum is ₦100.00.");
+      return;
+    }
+    try {
+      if (draft.service === "transfer") {
+        const who = await nameEnquiry(draft.destination, draft.provider);
+        if (!who.ok) {
+          say(who.message || "The bank could not verify that account. Check the number.");
+          return;
+        }
+        const q = await quoteTransfer({
+          amountMinor,
+          toAccount: draft.destination,
+          toBank: draft.provider,
+          ...(draft.narration ? { narration: draft.narration } : {}),
+        });
+        if (!q.ok) {
+          say(q.reason);
+          return;
+        }
+        const receipt: ReceiptPreview = {
+          title: "Send money",
+          amount: q.amountMinor / 100,
+          amountMinor: q.amountMinor,
+          rows: [
+            ["Status", "Awaiting your approval"],
+            ["Recipient account", q.toAccount],
+            ["Account name", q.toName],
+            ["Bank", q.toBank],
+            ...(draft.narration ? [["Narration", draft.narration] as [string, string]] : []),
+            ["Amount", naira(q.amountMinor / 100)],
+            ["Fee", naira(q.feeMinor / 100)],
+            ["Total", naira(q.totalMinor / 100)],
+            ["Reference", q.reference],
+          ],
+        };
+        setApproval({
+          receipt,
+          reference: q.reference,
+          execute: (pin) => executeTransfer(pin, q.reference),
+        });
+        return;
+      }
+
+      const category = draft.service as BillCategory;
+      const billers = await billBillers(category);
+      const biller = matchBiller(billers, draft.provider);
+      if (!biller) {
+        say(`I couldn't find ${draft.provider} on the biller list. Pick another provider.`);
+        return;
+      }
+      const { items } = await billItems(biller.id);
+      const item = pickBillItem(items, draft);
+      if (!item) {
+        say("That option isn't available right now. Pick another.");
+        return;
+      }
+      const open = !item.fixed || item.amountMinor <= 0;
+      const q = await quoteBill({
+        billerId: biller.id,
+        paymentItem: item.code,
+        customerId: draft.destination,
+        ...(open ? { amountMinor } : {}),
+      });
+      if (!q.ok) {
+        say(q.message);
+        return;
+      }
+      const unit =
+        draft.service === "electricity"
+          ? "Meter number"
+          : draft.service === "cable"
+            ? "Smartcard number"
+            : "Phone number";
+      const receipt: ReceiptPreview = {
+        title: SERVICE_LABELS[draft.service],
+        amount: q.amountMinor / 100,
+        amountMinor: q.amountMinor,
+        rows: [
+          ["Status", "Awaiting your approval"],
+          ["Provider", q.billerName],
+          ["Plan / package", q.itemName],
+          [unit, q.customerId],
+          ...(q.customerName ? [["Account name", q.customerName] as [string, string]] : []),
+          ...(q.customerAddress ? [["Address", q.customerAddress] as [string, string]] : []),
+          ["Amount", naira(q.amountMinor / 100)],
+          ...(q.convenienceMinor
+            ? [["Fee", naira(q.convenienceMinor / 100)] as [string, string]]
+            : []),
+          ["Total", naira(q.totalMinor / 100)],
+          ["Reference", q.reference],
+        ],
+      };
+      setApproval({
+        receipt,
+        reference: q.reference,
+        execute: (pin) => executeBill(pin, q.reference),
+      });
+    } catch (error) {
+      say(
+        error instanceof ApiError
+          ? error.message
+          : "I couldn't price that payment. Nothing was sent — please try again.",
+      );
+    }
+  };
+
+  const approved = (message: string) => {
+    const done = approval;
+    setApproval(null);
+    setPayment(null);
+    setChatChoices([]);
+    say(message);
+    if (!done) return;
+    void showReceipt(done.reference);
+  };
+
   const send = (raw: string, media?: ChatMedia) => {
     const t = raw.trim();
     if (!t || reply.busy.current || !user) return;
@@ -316,17 +593,35 @@ function ChatPage() {
       setText("");
       inputRef.current?.blur();
       if (offline) {
-        setNotice("You’re offline. Reconnect before approval. Nothing has been submitted.");
+        setNotice("You’re offline. Reconnect before approval. Nothing has been sent.");
         return;
       }
-      setApproval(payment);
+      void prepareApproval(payment);
       return;
     }
     if (payment?.field === "review" && /^\d{4}$/.test(t)) {
       setText("");
-      setNotice(
-        "Keep your PIN out of chat. Use Approve payment and enter only your demo PIN there.",
-      );
+      setNotice("Keep your PIN out of chat. Tap Approve payment and enter it in the secure sheet.");
+      return;
+    }
+    if (!media && !payment && /^(?:check\s+)?(?:my\s+)?balance$/i.test(t)) {
+      setText("");
+      inputRef.current?.blur();
+      void showBalance();
+      return;
+    }
+    if (!media && !payment && /^(?:activity|transactions|history|recent activity)$/i.test(t)) {
+      setText("");
+      inputRef.current?.blur();
+      void showActivity();
+      return;
+    }
+    const receiptRef =
+      !media && !payment ? t.match(/^receipt\s+([a-z0-9-]{6,})$/i)?.[1] : undefined;
+    if (receiptRef) {
+      setText("");
+      inputRef.current?.blur();
+      void showReceipt(receiptRef.toUpperCase());
       return;
     }
     followsBottom.current = true;
@@ -377,9 +672,9 @@ function ChatPage() {
         (!payment ||
           service !== payment.draft.service ||
           /^(?:please\s+)?(?:send|transfer|buy|recharge)\b|^(electricity|cable tv)$/i.test(t))
-          ? startPayment(service, t, user.name, undefined, user.phone)
+          ? startPayment(service, t, user.fullName ?? "", undefined, user.phone)
           : payment
-            ? answerPayment(payment, t, user.name, user.phone)
+            ? answerPayment(payment, t, user.fullName ?? "", user.phone)
             : null;
       if (turn) {
         setPayment(turn.state);
@@ -400,7 +695,7 @@ function ChatPage() {
       setPanel(requestedPanel);
       return;
     }
-    nellaSays(demoReply(t));
+    nellaSays(offlineReply(t).filter((part) => !part.card));
   };
 
   const runQuickAction = (action: QuickAction) => {
@@ -492,7 +787,7 @@ function ChatPage() {
     setApproval(null);
     changePanel(null);
     followsBottom.current = true;
-    const turn = startPayment(draft.service, "", user.name, draft);
+    const turn = startPayment(draft.service, "", user.fullName ?? "", draft);
     setPayment(turn.state);
     setChatChoices(turn.choices ?? []);
     nellaSays([
@@ -509,29 +804,17 @@ function ChatPage() {
     .reverse()
     .map(draftFromPreview)
     .find((draft) => draft !== null);
-  const first = user.name.split(" ")[0] || "there";
+  const first = (user.fullName ?? "").split(" ")[0] || "there";
   const empty = msgs.length === 0;
 
   return (
     <div className="chat-surface mx-auto flex h-[var(--app-height,100dvh)] min-h-0 w-full max-w-3xl flex-col overflow-hidden">
-      {approval && approval === payment && (
+      {approval && (
         <PaymentApproval
-          receipt={paymentPreview(approval.draft, user.name)}
-          user={user}
+          receipt={approval.receipt}
           onClose={() => setApproval(null)}
-          onComplete={() => {
-            setApproval(null);
-            setPayment(null);
-            setChatChoices([]);
-            nellaSays(
-              [
-                {
-                  text: "Demo PIN checked. No payment was submitted and no money moved. Live payment approval is not connected yet.",
-                },
-              ],
-              300,
-            );
-          }}
+          onApprove={approval.execute}
+          onApproved={approved}
         />
       )}
       <header className="relative z-10 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 bg-background px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
@@ -624,11 +907,11 @@ function ChatPage() {
               className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pt-6"
             >
               <DialogTitle>Your profile</DialogTitle>
-              <DialogDescription>Manage your Nella demo account.</DialogDescription>
+              <DialogDescription>Your Nella account and app settings.</DialogDescription>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="break-all font-bold">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">+234 {user.phone}</p>
+                  <p className="break-all font-bold">{user.fullName ?? "Nella account"}</p>
+                  <p className="text-xs text-muted-foreground">+234 {nationalPhone(user.phone)}</p>
                 </div>
               </div>
               <div className="my-3 h-px bg-border" />
@@ -822,18 +1105,24 @@ function ChatPage() {
               All money services
               <ArrowUp className="rotate-45" />
             </Button>
-            {user && !canEnterChat(user) && (
+            {user && !user.onboardingComplete && (
               <Button
                 variant="ghost"
                 className="h-11 text-xs text-muted-foreground"
-                onClick={() => setPanel("onboarding")}
+                onClick={() =>
+                  window.open(
+                    "https://wa.me/2348079574994?text=" +
+                      encodeURIComponent("Hi Nella, I'd like to finish opening my account."),
+                    "_blank",
+                  )
+                }
               >
                 <Shield />
-                Complete your account setup
+                Finish opening your account
               </Button>
             )}
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Preview only · Banking services aren't connected
+              Banking services by VFD Microfinance Bank · Nella is a product of Lantid Creative LTD
             </p>
           </div>
         ) : (
@@ -980,10 +1269,15 @@ function ChatPage() {
                           )}
                           {m.card?.kind === "balance" && (
                             <div className="rounded-[28px] bg-primary p-5 text-primary-foreground shadow-glow">
-                              <p className="text-xs opacity-80">Nella wallet</p>
-                              <p className="mt-1 text-lg font-bold">
-                                Your wallet balance is currently unavailable.
+                              <p className="text-xs opacity-80">Nella wallet balance</p>
+                              <p className="mt-1 break-all text-2xl font-extrabold tabular-nums">
+                                {m.card.amount}
                               </p>
+                              {user.accountNumber && (
+                                <p className="mt-2 text-[11px] opacity-80">
+                                  {user.bankName} · {user.accountNumber}
+                                </p>
+                              )}
                             </div>
                           )}
                           {m.card?.kind === "preview" && (
@@ -1030,11 +1324,8 @@ function ChatPage() {
                           {m.card?.kind === "approval" && (
                             <div className="glass rounded-[28px] border border-border p-5">
                               <p className="mb-3 rounded-lg bg-muted px-3 py-2 text-[11px] font-semibold leading-relaxed text-foreground">
-                                {m.card.service === "transfer"
-                                  ? "Transfers are currently unavailable."
-                                  : m.card.service === "airtime"
-                                    ? "Airtime purchases are currently unavailable."
-                                    : "Data purchases are currently unavailable."}
+                                Check these details, then continue to the live quote and your PIN.
+                                Nothing has been sent.
                               </p>
                               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 {m.card.service === "transfer"
@@ -1080,10 +1371,21 @@ function ChatPage() {
                                     variant="plain"
                                     size="none"
                                     type="button"
-                                    disabled
-                                    className="min-h-11 cursor-not-allowed rounded-xl bg-muted py-2.5 text-sm font-bold text-muted-foreground"
+                                    onClick={() => {
+                                      const card = m.card;
+                                      if (card?.kind !== "approval") return;
+                                      reuse({
+                                        service: card.service,
+                                        provider: card.bank,
+                                        destination: card.account,
+                                        plan: "",
+                                        amount: String(card.amount),
+                                        narration: card.narration ?? "",
+                                      });
+                                    }}
+                                    className="min-h-11 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground"
                                   >
-                                    Unavailable
+                                    Review &amp; pay
                                   </Button>
                                 </div>
                               ) : (
@@ -1098,13 +1400,17 @@ function ChatPage() {
                           {m.card?.kind === "receipt" && (
                             <div className="rounded-[28px] bg-card p-5 text-card-foreground">
                               <div className="flex items-center gap-2 text-sm font-bold">
-                                <CircleHelp className="h-4 w-4 text-muted-foreground" /> Transaction
-                                status
+                                <ReceiptText className="h-4 w-4 text-primary" />
+                                {m.card.title}
                               </div>
-                              <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground">
-                                We couldn’t verify this transaction. Check your account before
-                                retrying.
+                              <p className="mt-2 break-all text-2xl font-extrabold tabular-nums">
+                                {naira(m.card.amount)}
                               </p>
+                              <dl className="mt-3 space-y-2 text-sm">
+                                {m.card.rows.map(([key, value]) => (
+                                  <Row key={key} k={key} v={value} />
+                                ))}
+                              </dl>
                             </div>
                           )}
                         </div>
@@ -1233,8 +1539,6 @@ function ChatPage() {
         onBack={panelBack}
         depth={panelDepth}
         user={user}
-        previews={previews}
-        onReuse={reuse}
       />
       <form
         onSubmit={(e: FormEvent) => {
@@ -1397,51 +1701,63 @@ function ChatPage() {
             role="status"
             className="mb-2 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-foreground"
           >
-            You’re offline. This demo can prepare details locally, but messages and payments are not
-            queued or sent to Nella.
+            You’re offline. You can prepare details, but nothing is sent to Nella until you
+            reconnect.
           </p>
         )}
-        {payment && (
-          <div className="mb-2 flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
-            <ol
-              aria-label="Payment progress"
-              className="flex min-w-0 flex-1 gap-1 overflow-x-auto text-[11px]"
-            >
-              {paymentSteps(payment).map((step) => (
-                <li
-                  key={step.key}
-                  aria-current={step.current ? "step" : undefined}
-                  className={`shrink-0 rounded-full px-2 py-1 font-semibold ${step.current ? "bg-primary text-primary-foreground" : step.done ? "bg-secondary text-primary" : "bg-muted text-muted-foreground"}`}
+        {payment &&
+          (() => {
+            const steps = paymentSteps(payment);
+            const at = Math.max(1, steps.findIndex((step) => step.current) + 1);
+            const label = steps[at - 1]?.label ?? "";
+            return (
+              <div className="mb-2 flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-baseline gap-1.5 text-[11px]">
+                    <span className="shrink-0 font-semibold text-foreground">
+                      Step {at} of {steps.length}
+                    </span>
+                    <span className="truncate text-muted-foreground">{label}</span>
+                  </p>
+                  <div
+                    role="progressbar"
+                    aria-label="Payment progress"
+                    aria-valuemin={1}
+                    aria-valuemax={steps.length}
+                    aria-valuenow={at}
+                    className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted"
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-300"
+                      style={{ width: `${(at / steps.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="none"
+                  type="button"
+                  className="h-11 shrink-0 px-3 text-xs font-semibold text-destructive"
+                  onClick={() => {
+                    reply.cancel();
+                    setPayment(null);
+                    setChatChoices([]);
+                    commit([
+                      ...msgsRef.current,
+                      {
+                        id: uid(),
+                        role: "nella",
+                        text: "Payment cancelled. Nothing was sent.",
+                        at: Date.now(),
+                      },
+                    ]);
+                  }}
                 >
-                  {step.done ? "✓ " : ""}
-                  {step.label}
-                </li>
-              ))}
-            </ol>
-            <Button
-              variant="ghost"
-              size="none"
-              type="button"
-              className="h-11 shrink-0 px-3 text-xs font-semibold text-destructive"
-              onClick={() => {
-                reply.cancel();
-                setPayment(null);
-                setChatChoices([]);
-                commit([
-                  ...msgsRef.current,
-                  {
-                    id: uid(),
-                    role: "nella",
-                    text: "Payment cancelled. Nothing was sent.",
-                    at: Date.now(),
-                  },
-                ]);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
+                  Cancel
+                </Button>
+              </div>
+            );
+          })()}
         {replyingTo && (
           <div className="mb-2 flex items-center gap-2 rounded-2xl border-l-4 border-primary bg-muted px-3 py-2">
             <div className="min-w-0 flex-1 text-xs">

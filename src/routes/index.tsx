@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { canEnterChat, currentUser } from "@/lib/demo-store";
+import { currentUser } from "@/lib/api";
 import { NellaMascot } from "@/components/nella-mascot";
 import { LockKeyhole } from "lucide-react";
 import nellaFooterLogo from "@/assets/nella-footer-logo.png";
@@ -33,12 +33,9 @@ function SplashScreen() {
   useEffect(() => {
     const go = () => {
       setLeaving(true);
-      setTimeout(
-        () => navigate({ to: canEnterChat(currentUser()) ? "/chat" : "/auth", replace: true }),
-        260,
-      );
+      setTimeout(() => navigate({ to: currentUser() ? "/chat" : "/auth", replace: true }), 260);
     };
-    const t = setTimeout(go, canEnterChat(currentUser()) ? 1200 : 1900);
+    const t = setTimeout(go, currentUser() ? 1200 : 1900);
     return () => clearTimeout(t);
   }, [navigate]);
 
@@ -48,10 +45,7 @@ function SplashScreen() {
       onClick={() => {
         if (!leaving) {
           setLeaving(true);
-          setTimeout(
-            () => navigate({ to: canEnterChat(currentUser()) ? "/chat" : "/auth", replace: true }),
-            260,
-          );
+          setTimeout(() => navigate({ to: currentUser() ? "/chat" : "/auth", replace: true }), 260);
         }
       }}
       className={`splash-surface splash-enter relative flex min-h-dvh select-none flex-col items-center justify-center overflow-hidden px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-center ${leaving ? "splash-leave" : ""}`}
@@ -86,7 +80,7 @@ function SplashScreen() {
 
       <footer className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom))] px-6">
         <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-sidebar-foreground/50">
-          <LockKeyhole className="h-3.5 w-3.5" /> Preview only · No real money moves
+          <LockKeyhole className="h-3.5 w-3.5" /> Secured by VFD Microfinance Bank
         </p>
       </footer>
     </main>

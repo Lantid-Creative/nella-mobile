@@ -95,7 +95,7 @@ describe("Chat-only payments", () => {
     }
     expect(turn.preview?.amount).toBe(5000);
     expect(turn.preview?.rows).toContainEqual(["Recipient account", "0123456789"]);
-    expect(turn.preview?.rows).toContainEqual(["Status", "Preview only — not submitted"]);
+    expect(turn.preview?.rows).toContainEqual(["Status", "Not sent — awaiting your approval"]);
   });
   it("rejects invalid account numbers without advancing", () => {
     const state = startPayment("transfer", "Send money to GTBank", "Ada").state;
