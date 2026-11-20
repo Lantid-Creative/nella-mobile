@@ -4,10 +4,10 @@ Everything needed to get Nella onto the **App Store** and **Google Play**, and
 what is already automated so the release is a terminal command rather than a
 click-through.
 
-The app today is a **preview**: the account, the chat and the payment breakdowns
-live on the device, no bank is connected and no money moves. That is deliberate
-and it is stated in the app, the listing and the privacy policy. The work that
-has to happen before real money is handled is in [§7](#7-before-real-money).
+The app is the **real product**: it signs in to the live Nella service, reads the
+customer's VFD Microfinance Bank wallet, and quotes and executes transfers,
+airtime, data and bills against it. Everything a reviewer can do is real money
+behaviour — so the declarations below describe a financial app, not a demo.
 
 ---
 
@@ -58,7 +58,7 @@ documents above; they deliberately do not restate them.
 | Screenshots                | 6.9" + 6.5" iPhone and 1080×1920 Android, captured from the running app — `bun run screenshots`                   |
 | Play graphics              | 1024×500 feature graphic and 512×512 icon — also `bun run screenshots`                                            |
 | Listing text               | in `fastlane/metadata/`, within every store character limit                                                       |
-| Privacy manifest           | `ios/App/App/PrivacyInfo.xcprivacy` — no tracking, no collected data                                              |
+| Privacy manifest           | `ios/App/App/PrivacyInfo.xcprivacy` — name, phone, user id, financial info, sensitive identity info; no tracking    |
 | Export compliance          | `ITSAppUsesNonExemptEncryption = false` in `Info.plist`                                                           |
 | Camera / microphone        | usage strings on iOS, permissions on Android                                                                      |
 | Upload uploads             | `fastlane/Fastfile` lanes for both stores, called by `.github/workflows/store.yml`                                |
@@ -146,16 +146,29 @@ answered. Every answer below is correct for **this** build — copy them as-is.
 | Category       | Finance (secondary: Utilities)                                               |
 | Age rating     | 4+ — no objectionable content, no user-generated content, no gambling        |
 | Price          | Free, all territories                                                        |
-| App Privacy    | **No data collected** (see the note below)                                   |
+| App Privacy    | **Data is collected** — see the table below                                  |
 | Content rights | Does not contain third-party content                                         |
 | Encryption     | Already declared in the build; nothing to answer here                        |
 | Review notes   | Use the text in [§5](#app-review-notes-paste-this-into-the-review-notes-box) |
 | Demo account   | Not needed — "Get started" has no sign-in                                    |
 
-**App Privacy** is the one that gets submissions rejected when it is skipped.
-Answer: _no, we do not collect data from this app_. The preview stores the name,
-phone and PIN only in local app storage, sends nothing off the device, and has no
-analytics or advertising SDK. That matches `ios/App/App/PrivacyInfo.xcprivacy`.
+**App Privacy** is the one that gets submissions rejected when it is skipped or
+when it disagrees with the build. Answer _yes, we collect data_, **linked to the
+user's identity**, **not used for tracking**, for **App Functionality** only:
+
+| Data type          | Collected | Linked | Tracking | Purpose          |
+| ------------------ | --------- | ------ | -------- | ---------------- |
+| Name               | Yes       | Yes    | No       | App Functionality |
+| Phone Number       | Yes       | Yes    | No       | App Functionality |
+| User ID            | Yes       | Yes    | No       | App Functionality |
+| Financial Info     | Yes       | Yes    | No       | App Functionality |
+| Sensitive Info     | Yes       | Yes    | No       | App Functionality |
+
+This matches `ios/App/App/PrivacyInfo.xcprivacy` and the policy at
+`https://usenella.com/privacy-policy`. Payments are made to a bank account the
+customer holds with VFD Microfinance Bank; the BVN/NIN is collected once, during
+account opening, and is what "Sensitive Info" covers. The app has no analytics,
+no advertising SDK and no tracking domains.
 
 ### Google Play Console — App content
 
@@ -164,21 +177,36 @@ Everything under **Policy → App content** has to be green before Production:
 | Declaration                 | Answer                                                                                                         |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Privacy policy              | `https://usenella.com/privacy-policy`                                                                          |
-| App access                  | All functionality is available without special access                                                          |
+| App access                  | **Restricted** — sign-in required. Provide the demo account in the App access declaration.                      |
 | Ads                         | No ads                                                                                                         |
 | Content rating              | Fill the questionnaire: no violence, sex, language, drugs, gambling, or user interaction → expect **Everyone** |
 | Target audience             | 18 and over                                                                                                    |
 | News app                    | No                                                                                                             |
-| Data safety                 | **No data collected, no data shared**; no tracking; nothing transmitted off the device                         |
+| Data safety                 | **Data collected and shared** — see the table below; encrypted in transit; no tracking                         |
 | Government app              | No                                                                                                             |
-| Financial features          | Not a banking app in this build — it links to no financial institution and cannot transact                     |
+| Financial features          | **Money transfer + digital wallet**, operated with a licensed partner (VFD Microfinance Bank)                    |
 | Health                      | No                                                                                                             |
 | Photo and video permissions | Camera is used only for bill capture started by the user; nothing is uploaded                                  |
 | Microphone permissions      | Used only while the user holds to record a voice note                                                          |
 
-Both stores will compare these answers against the app. If the app starts
-sending anything off the device, these tables and the privacy policy have to
-change in the same release — see [§7](#7-before-real-money).
+Play's **Data safety** form must list, for each data type: collected, shared,
+encrypted in transit, and whether it is required. The honest answer for this
+build:
+
+| Data type                   | Collected | Shared | Purpose                              |
+| --------------------------- | --------- | ------ | ------------------------------------ |
+| Name                        | Yes       | Yes    | Account management, app functionality |
+| Phone number                | Yes       | Yes    | Account management, app functionality |
+| User IDs                    | Yes       | No     | Account management                    |
+| Financial info              | Yes       | Yes    | App functionality                     |
+| Government ID / other info   | Yes       | Yes    | Account management, fraud prevention  |
+| App activity (in-app history) | Yes     | No     | App functionality                     |
+
+"Shared" means it reaches VFD Microfinance Bank (the account provider and the
+payment rail), the biller/network being paid, and identity-verification and
+fraud-prevention providers — never advertisers, and never sold. Both stores
+compare these answers against the build, and the privacy policy has to say the
+same thing in the same release.
 
 ### Apple, once per account
 
@@ -271,11 +299,12 @@ Play will not let a release go live until the console has a **content rating**
 and a **data safety** declaration, and neither can be filled through the API.
 Fill them once in the console:
 
-- **Content rating** → answer the questionnaire. The preview has no user
-  content, no ads, no purchases → expect _Everyone_.
-- **Data safety** → **No data collected**, **no data shared**, no tracking. This
-  matches the iOS privacy manifest.
-- **App access** → _All functionality is available without special access_.
+- **Content rating** → answer the questionnaire. No user-generated content, no
+  ads, no gambling, no purchases → expect _Everyone / PEGI 3_.
+- **Data safety** → collected and shared, as in the table in §2b; encrypted in
+  transit; no tracking.
+- **App access** → _Restricted_: sign-in required. Add the demo account
+  (`+2348012345678` / `1234`) in the declaration.
 - **Ads** → No.
 - **Government apps / Health apps** → No.
 
@@ -314,12 +343,23 @@ it in the console, or the two drift apart.
 
 ### App Review notes (paste this into the review notes box)
 
-> Nella is a chat-first money companion. This build is a preview: it is a native
-> WebView shell around an offline-first web app, with native camera capture,
-> microphone recording, haptics, the Android hardware back button and WebAuthn
-> device unlock. No bank account is connected, no payment can be completed and no
-> data leaves the device. Tap "Get started" — there is no account to create and
-> no credentials are needed.
+> Nella is a chat-first money app. Customers hold a real Nigerian wallet with VFD
+> Microfinance Bank, and the app signs in to that account to send money, buy
+> airtime and data, and pay bills. The app is a Capacitor shell around the Nella
+> web app, with native camera capture, microphone recording, haptics, the Android
+> hardware back button and WebAuthn device unlock.
+>
+> Sign in with the demo account below. It is a real account on our live service
+> with a small test balance, so every flow can be exercised end to end:
+>
+> Phone: +234 801 234 5678
+> PIN: 1234
+>
+> Please do not send money to arbitrary accounts — the transfer screen validates
+> a recipient name with the bank before a payment can be quoted. Bills and
+> airtime also work. New accounts are opened with our team on WhatsApp
+> (https://wa.me/2348079574994) rather than inside the app, which is why there is
+> no in-app sign-up; PIN resets go through the same channel.
 
 ### Screenshots
 
@@ -330,9 +370,21 @@ it in the console, or the two drift apart.
 - Android phone — 1080×1920
 - Play feature graphic 1024×500, icon 512×512
 
-It drives the real UI: the welcome screen, the chat, a transfer being prepared,
-and the review card. If the UI changes, re-run it — never ship screenshots of a
-build that no longer exists.
+It drives the real UI and captures six scenes per device:
+
+| File          | Scene                                                            |
+| ------------- | ---------------------------------------------------------------- |
+| `01-welcome`  | Sign in with phone and PIN                                       |
+| `02-chat`     | The chat greeting and the money quick actions                    |
+| `03-transfer` | A transfer being prepared, with the progress tracker             |
+| `04-review`   | The payment breakdown before approval                            |
+| `05-receipt`  | A receipt opened from its reference                              |
+| `06-balance`  | Wallet balance and the last transactions                         |
+
+Each shot seeds a signed-in session in local storage and answers the API with
+fixtures in the script, so the pixels are the real UI and no request reaches
+production. If the UI changes, re-run it — never ship screenshots of a build
+that no longer exists.
 
 ---
 
@@ -353,42 +405,42 @@ build that no longer exists.
 
 ---
 
-## 7. Before real money
+## 7. What is live in 1.0
 
-The preview is honest about what it is, and that honesty has to survive the
-connection to live services.
+The mobile surface is `/api/mobile/v1`. The old `/api/mobile/*` routes were
+retired on 10 Nov 2026 (phone + PIN in the query string, tokens that never
+expired) and a deny-by-default gate keeps them closed — `src/lib/mobile-gate.ts`.
 
-- [ ] **A real customer session API.** The old `/api/mobile/*` routes were
-      retired on 10 Nov 2026: they took the phone and PIN in the query string on
-      a session token that never expired. The replacement needs a short-lived,
-      revocable session carried in the `Authorization` header. Do not resurrect
-      the old scheme.
-- [ ] **Server-owned financial rules.** Quote expiry, fees, limits and
-      eligibility are decided on the server. The app may preview and request —
-      never authorise.
-- [ ] **Idempotency.** A transfer is submitted once with an idempotency key, and
-      the outcome distinguishes processing / held / unknown / failed / sent /
-      reversed. `unknown` must never invite a blind retry.
-- [ ] **Private approval.** The PIN goes into a private form and is verified by
-      the server — never in chat, never compared in the browser.
-- [ ] **Durable events.** Balance, activity, receipts, notifications and support
-      read the same event state, so the app and WhatsApp never disagree.
-- [ ] **Push notifications.** `@capacitor/push-notifications`, APNs, FCM and a
-      device-token registry on the server.
+- **Sessions.** PIN login returns a short-lived access token and a rotating
+  refresh token bound to the device id. A replayed refresh fails; a refresh from
+  another device id revokes the session. Logout revokes both.
+- **Server-owned money.** Quotes, fees, limits, fraud holds and balances are
+  computed on the server and the approval is parked there; the app only ever
+  holds a reference. The PIN is verified server-side.
+- **Bills and receipts.** The catalogue is VFD's own list, cleaned and
+  de-duplicated per request. Purchases park in `onboarding.pendingBillMobile` so
+  a chat approval waiting on the same account is never clobbered. Receipts are
+  rebuilt from the ledger by `buildReceipt`.
+- **Honest copy.** The app says the bank provides the service, never promises a
+  licence it does not have, and routes account opening and PIN resets to a human
+  on WhatsApp.
+
+Still open, and worth doing before the app is promoted:
+
 - [ ] **Secure storage.** Move the session out of `localStorage` into the iOS
       keychain / Android encrypted storage.
-- [ ] **Update the privacy manifest and both store privacy labels** for the data
-      that is now collected. This is a legal change, not a code change.
+- [ ] **Push notifications.** `@capacitor/push-notifications`, APNs, FCM and a
+      device-token registry on the server.
+- [ ] **In-app statement download** (the receipt PDF endpoint exists; the app
+      does not surface it yet).
 - [ ] **Update `docs/whatsapp-to-app-coverage.md`**, the coverage audit and
       handoff for this work.
 
----
-
 ## 8. Known gaps in this release
 
-- The app talks to no backend; everything is local.
 - No push notifications, no offline caching and no deep links.
+- The session lives in web storage, not the platform keychain (see §7).
 - Play's content rating and data safety are console-only, so the first Android
   release lands as a draft.
-- The privacy manifest, both privacy labels and the policy text all have to be
-  updated together when live banking arrives.
+- The privacy manifest, both privacy labels and the policy text describe the
+  same data today; they must keep changing together.

@@ -139,21 +139,114 @@ function chromePath() {
 
 /* ---------------------------------------------------------------- scenes -- */
 
-/** A ready demo account, exactly what the app writes after setup completes. */
+/**
+ * A signed-in account, exactly as the app stores it after login. The session is
+ * a real shape but its tokens never leave this browser: every API call below is
+ * answered by the fixtures in `stubApi`, so the screenshots are the real UI with
+ * believable data and no request ever reaches production.
+ */
+const ACCOUNT = {
+  phone: "2348012345678",
+  fullName: "Ada Obi",
+  tier: 2,
+  status: "ACTIVE",
+  accountNumber: "1001701935",
+  bankName: "VFD Microfinance Bank",
+  onboardingComplete: true,
+  kycStep: 2,
+};
+
 const SEED = `
-  localStorage.setItem("nella.users.v2", JSON.stringify([{
-    name: "Ada Obi",
-    phone: "8012345678",
-    pin: "1234",
-    onboardingComplete: true,
-    kycSetupComplete: true,
-    kycStep: 2
-  }]));
-  localStorage.setItem("nella.session.v2", "8012345678");
+  localStorage.setItem("nella.auth.v1", JSON.stringify({
+    accessToken: "screenshot-token",
+    refreshToken: "screenshot-refresh-token-000000000000",
+    expiresAt: Date.now() + 1800000,
+    user: ${JSON.stringify(ACCOUNT)}
+  }));
+  localStorage.setItem("nella.device.v1", "screenshot-device-0001");
+  // The swipe-to-reply tip is a first-run coach mark; a store shot should not
+  // carry it, so mark it as already dismissed.
+  localStorage.setItem("nella.tip.swipe", "1");
 `;
 
-/** Same account without a session, so the welcome screen is reachable. */
-const SEED_SIGNED_OUT = SEED.split('localStorage.setItem("nella.session.v2", "8012345678");')[0];
+const API = "https://usenella.com/api/mobile/v1";
+
+/** Answers the app's API calls so a shot never depends on the live service. */
+async function stubApi(context) {
+  const fixtures = [
+    [
+      /\/balance$/,
+      {
+        ok: true,
+        balanceMinor: 1990000,
+        currency: "NGN",
+        accountNumber: ACCOUNT.accountNumber,
+        bankName: ACCOUNT.bankName,
+        asOf: "2026-11-19T09:00:00.000Z",
+      },
+    ],
+    [
+      /\/history\?/,
+      {
+        ok: true,
+        transactions: [
+          {
+            id: "1",
+            reference: "NLMWMTSG8AEB17",
+            type: "debit",
+            amountMinor: 2500000,
+            currency: "NGN",
+            description: "Transfer to Chidi Okonkwo",
+            createdAt: "2026-11-18T10:12:00.000Z",
+          },
+          {
+            id: "2",
+            reference: "NLMWMTSG8AEB11",
+            type: "credit",
+            amountMinor: 15000000,
+            currency: "NGN",
+            description: "Transfer from Ada Obi",
+            createdAt: "2026-11-17T15:40:00.000Z",
+          },
+        ],
+        total: 2,
+        page: 1,
+        pageSize: 30,
+        totalPages: 1,
+      },
+    ],
+    [
+      /\/receipt\?/,
+      {
+        ok: true,
+        receipt: {
+          title: "Transfer to Chidi Okonkwo",
+          amount: 25000,
+          amountMinor: 2500000,
+          rows: [
+            ["Status", "Successful"],
+            ["Recipient account", "0123456789"],
+            ["Bank", "GTBank"],
+            ["Narration", "Rent"],
+            ["Fee", "₦0.00"],
+            ["Reference", "NLMWMTSG8AEB17"],
+            ["Date", "18 Nov 2026, 11:12"],
+          ],
+        },
+      },
+    ],
+    [/\/me$/, { ok: true, user: ACCOUNT }],
+  ];
+  await context.route(`${API}/**`, async (route) => {
+    const url = route.request().url();
+    const hit = fixtures.find(([pattern]) => pattern.test(url));
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(hit ? hit[1] : { ok: false, message: "Not part of this screenshot." }),
+    });
+  });
+}
 
 const SCENES = [
   {
@@ -196,7 +289,34 @@ const SCENES = [
       await send(page, "Send ₦25,000 to 0123456789 GTBank");
       await page.getByText(/this transfer for/i).waitFor();
       await page.getByRole("button", { name: "Rent", exact: true }).click();
-      await page.getByText(/Nothing has been paid/i).waitFor();
+      await page
+        .getByText(/Not sent/i)
+        .first()
+        .waitFor();
+    },
+  },
+  {
+    name: "05-receipt",
+    path: "/chat",
+    async play(page) {
+      await page.getByLabel("Message Nella").waitFor();
+      await send(page, "receipt NLMWMTSG8AEB17");
+      await page.getByText(/Here's your receipt/i).waitFor();
+      await page
+        .getByText(/NLMWMTSG8AEB17/)
+        .first()
+        .waitFor();
+    },
+  },
+  {
+    name: "06-balance",
+    path: "/chat",
+    async play(page) {
+      await page.getByLabel("Message Nella").waitFor();
+      await send(page, "Check my balance");
+      await page.getByText(/₦19,900\.00/).waitFor();
+      await send(page, "activity");
+      await page.getByText(/Your last \d+ transactions?/i).waitFor();
     },
   },
 ];
@@ -301,11 +421,27 @@ try {
         timezoneId: "Africa/Lagos",
         colorScheme: "dark",
       });
-      await context.addInitScript(scene.signedOut ? SEED_SIGNED_OUT : SEED);
+      if (!scene.signedOut) await context.addInitScript(SEED);
 
+      await stubApi(context);
       const page = await context.newPage();
       await page.goto(`${origin}${scene.path}`, { waitUntil: "networkidle" });
       await scene.play(page);
+      // Messages animate in. Waiting for the finite animations (never an infinite
+      // one, like the typing dots) keeps a half-faded bubble out of the listing.
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        const finite = document.getAnimations().filter((a) => {
+          const timing = a.effect?.getComputedTiming?.();
+          return timing && timing.iterations !== Infinity && a.playState !== "finished";
+        });
+        await Promise.all(finite.map((a) => a.finished.catch(() => {})));
+      });
+      // Drop the caret/focus ring the scripted typing left on the composer.
+      await page.evaluate(() =>
+        document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined,
+      );
+      await page.waitForTimeout(150);
 
       const file = device.file(scene.name);
       mkdirSync(join(file, ".."), { recursive: true });

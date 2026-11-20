@@ -1,18 +1,26 @@
 Nella is your money companion — and she lives in your chat.
 
-Instead of hunting through menus, you say what you need. Tell Nella you want to send money, buy airtime or pay a bill, and she takes you through it one step at a time, showing exactly what will happen before anything is submitted.
+Instead of hunting through menus, you say what you need. Tell Nella you want to send money, buy airtime, pay a bill or check your balance, and she takes you through it one step at a time. Every payment is quoted before you approve it: recipient, amount, fee and total, in one clear screen.
 
 WHAT YOU CAN DO
-• Start a transfer and see a full breakdown before you approve anything
-• Buy airtime or data by chatting
-• Keep the conversation next to your payment details, so nothing gets lost
-• Reply, react, and send a voice note or a photo in the chat itself
+• Send money to any Nigerian bank account, with the recipient's name checked before you pay
+• Buy airtime and data for yourself or someone else
+• Pay electricity bills, DStv, GOtv and Startimes
+• Check your balance and open a receipt for any payment
+• Keep a list of the people you have paid, with their account details
+• Approve payments with your PIN in a private sheet, never in the chat
+• Reply, react, and send a voice note or a photo in the conversation itself
 • Switch between light, dark or your phone's setting
 
-THIS RELEASE IS A PREVIEW
-This version is a hands-on preview. It runs entirely on your device: no bank account is connected, no real money moves, and nothing you type leaves your phone. Live banking, verified accounts and real payments arrive in a future update.
+HOW IT WORKS
+Your Nella account is a real Nigerian wallet, opened after identity checks and held with VFD Microfinance Bank. Fund it with a transfer from any bank, then spend from it in the chat. Your money is held by the bank, not by Nella.
 
-WHY CHAT?
-Money is easier to talk about than to click through. Nella asks one clear question at a time, repeats the details back to you and never hides a fee — like messaging a helpful friend who happens to be very careful with your money.
+WHAT IT COSTS
+Every quote shows the fee before you approve. Many transfers are free, and the amount you approve is the amount that executes.
 
-We are building in the open. Tell us what feels slow, confusing or missing: the chat is the product, and it gets better with every conversation.
+SAFETY
+Payments need your 4-digit PIN, entered only in the secure approval sheet. Nella never asks for your PIN, OTP or bank password in a chat, an email or a phone call. A first payment to a new recipient can be held briefly for your protection — we tell you when that happens.
+
+Nella is a product of Lantid Creative LTD. Banking services are provided by VFD Microfinance Bank.
+
+Support: support@usenella.com · WhatsApp +234 807 957 4994

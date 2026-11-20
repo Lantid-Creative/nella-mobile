@@ -42,8 +42,9 @@ export function LegalPage({
         <section className="mt-10 rounded-2xl border border-border bg-card p-5">
           <h2 className="text-sm font-bold text-foreground">The full documents</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Nella is a product of Harrena Africa Synergy LTD. The policies that govern the service
-            live on {new URL(SITE_URL).hostname}:
+            Nella is a product of Lantid Creative LTD. Banking services are provided by VFD
+            Microfinance Bank. The policies that govern the service live on{" "}
+            {new URL(SITE_URL).hostname}:
           </p>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
             <li>
@@ -85,7 +86,7 @@ export function LegalPage({
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">
-          Preview build · No real money moves · No data leaves this device
+          Nella · Banking services by VFD Microfinance Bank
         </p>
       </div>
     </main>

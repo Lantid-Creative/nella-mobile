@@ -1,5 +1,5 @@
-First preview of Nella.
+Nella 1.0 — your money, in a chat.
 
-Explore the chat, prepare a transfer, and review the full breakdown before anything is submitted. Buy airtime or data, and keep every payment detail in the conversation.
+Send money to any Nigerian bank, buy airtime and data, pay electricity and TV bills, check your balance and open receipts for any payment. Every payment is quoted before you approve it.
 
-This version runs entirely on your device. No real money moves and nothing you type leaves your phone — live banking comes next.
+Nella is a product of Lantid Creative LTD. Banking services are provided by VFD Microfinance Bank.
