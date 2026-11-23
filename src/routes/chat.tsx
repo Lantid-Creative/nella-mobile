@@ -547,7 +547,12 @@ function ChatPage() {
         rows: [
           ["Status", "Awaiting your approval"],
           ["Provider", q.billerName],
-          ["Plan / package", q.itemName],
+          // A data bundle or a TV package is the thing being bought, so name it.
+          // Airtime's catalogue row is an internal code ("MTN_VTU2"), and the
+          // amount is the choice, so it would only add noise there.
+          ...(draft.service === "data" || draft.service === "cable"
+            ? [["Plan / package", q.itemName] as [string, string]]
+            : []),
           [unit, q.customerId],
           ...(q.customerName ? [["Account name", q.customerName] as [string, string]] : []),
           ...(q.customerAddress ? [["Address", q.customerAddress] as [string, string]] : []),

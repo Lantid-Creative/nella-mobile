@@ -304,7 +304,7 @@ Fill them once in the console:
 - **Data safety** → collected and shared, as in the table in §2b; encrypted in
   transit; no tracking.
 - **App access** → _Restricted_: sign-in required. Add the demo account
-  (`+2348012345678` / `1234`) in the declaration.
+  (`07074430088` / `1011`) in the declaration.
 - **Ads** → No.
 - **Government apps / Health apps** → No.
 
@@ -350,10 +350,10 @@ it in the console, or the two drift apart.
 > hardware back button and WebAuthn device unlock.
 >
 > Sign in with the demo account below. It is a real account on our live service
-> with a small test balance, so every flow can be exercised end to end:
+> with a balance, so every flow can be exercised end to end:
 >
-> Phone: +234 801 234 5678
-> PIN: 1234
+> Phone: 07074430088 (or +234 707 443 0088)
+> PIN: 1011
 >
 > Please do not send money to arbitrary accounts — the transfer screen validates
 > a recipient name with the bank before a payment can be quoted. Bills and
