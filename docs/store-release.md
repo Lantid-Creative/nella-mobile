@@ -303,8 +303,8 @@ Fill them once in the console:
   ads, no gambling, no purchases → expect _Everyone / PEGI 3_.
 - **Data safety** → collected and shared, as in the table in §2b; encrypted in
   transit; no tracking.
-- **App access** → _Restricted_: sign-in required. Add the demo account
-  (`07074430088` / `1011`) in the declaration.
+- **App access** → _Restricted_: sign-in required. Add the **live test account**
+  `07074430088` / `1011` as "Live Test Account" in the declaration.
 - **Ads** → No.
 - **Government apps / Health apps** → No.
 
@@ -349,10 +349,10 @@ it in the console, or the two drift apart.
 > web app, with native camera capture, microphone recording, haptics, the Android
 > hardware back button and WebAuthn device unlock.
 >
-> Sign in with the demo account below. It is a real account on our live service
-> with a balance, so every flow can be exercised end to end:
+> Below is a LIVE TEST ACCOUNT on our production service — a real Nella wallet
+> with a real balance, not a sandbox or a demo mode. Sign in with:
 >
-> Phone: 07074430088 (or +234 707 443 0088)
+> Phone: +234 707 443 0088
 > PIN: 1011
 >
 > Please do not send money to arbitrary accounts — the transfer screen validates
@@ -360,6 +360,9 @@ it in the console, or the two drift apart.
 > airtime also work. New accounts are opened with our team on WhatsApp
 > (https://wa.me/2348079574994) rather than inside the app, which is why there is
 > no in-app sign-up; PIN resets go through the same channel.
+>
+> If the account is unreachable during review, contact us at
+> support@usenella.com or +234 807 957 4994 and we will restore it.
 
 ### Screenshots
 
