@@ -293,6 +293,38 @@ git tag ios-v1.0.0     && git push origin ios-v1.0.0
 git tag android-v1.0.0 && git push origin android-v1.0.0
 ```
 
+### Building the AAB without CI
+
+If Actions is unavailable, the AAB can be built on the VPS (Ubuntu 24.04) and
+uploaded by hand. The toolchain is already installed there:
+
+- **JDK 21** at `/usr/lib/jvm/java-21-openjdk-amd64` — Capacitor's Android
+  library compiles with `--release 21`, so JDK 17 fails with
+  `invalid source release: 21`.
+- **Android SDK** at `/opt/android-sdk` (`platforms;android-36`,
+  `build-tools;36.0.0`, `platform-tools`).
+- The repo clones over the `github-nella-mobile` SSH alias (deploy key).
+- The upload keystore lives at `/root/nella-upload.p12` (mode 600). The
+  `android/keystore.properties` file is written at build time and never
+  committed.
+
+```sh
+export ANDROID_HOME=/opt/android-sdk JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$JAVA_HOME/bin:/root/.bun/bin:$PATH"
+git clone -q github-nella-mobile:Lantid-Creative/nella-mobile.git /root/nella-mobile-build
+cd /root/nella-mobile-build
+bun install --frozen-lockfile
+node scripts/build-app.mjs
+./node_modules/.bin/cap sync android
+# android/keystore.properties: storeFile/root/nella-upload.p12, keyAlias nella,
+# PKCS12, with the passwords from ~/.nella-keys/passwords.txt
+cd android && ./gradlew --no-daemon bundleRelease
+# → android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Upload that file to **Production → Create new release**. The first upload
+enrols Play App Signing; the key in the AAB is only the upload key.
+
 ### Why Android stops at "draft"
 
 Play will not let a release go live until the console has a **content rating**
