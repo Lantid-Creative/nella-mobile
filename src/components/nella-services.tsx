@@ -727,10 +727,10 @@ function InsightsPanel({ onChange }: { onChange: (panel: AppPanel | null) => voi
         if (!active) return;
         const inMinor = page.transactions
           .filter((t) => t.type === "credit")
-          .reduce((n, t) => n + t.amountMinor, 0);
+          .reduce((n, t) => n + Number(t.amountMinor), 0);
         const outMinor = page.transactions
           .filter((t) => t.type === "debit")
-          .reduce((n, t) => n + t.amountMinor, 0);
+          .reduce((n, t) => n + Number(t.amountMinor), 0);
         setTotals({ inMinor, outMinor, count: page.transactions.length });
       })
       .catch((e: unknown) => {

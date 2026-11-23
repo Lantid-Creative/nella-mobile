@@ -444,3 +444,11 @@ Still open, and worth doing before the app is promoted:
   release lands as a draft.
 - The privacy manifest, both privacy labels and the policy text describe the
   same data today; they must keep changing together.
+- The **dev** stack runs against the VFD sandbox, whose bills catalogue is
+  incomplete: MTN and GLO airtime have no items there (only `CS_MTN` with zero
+  offers, plus the data bundles), while the production catalogue has one open
+  airtime item per network. Quote airtime against production before calling an
+  airtime change tested — a green dev run does not prove MTN airtime.
+- The review contact and demo account live in App Store Connect
+  (`appStoreReviewDetail`) and Play's **App access** declaration, not in this
+  repository. Update both when the demo number or PIN changes.
